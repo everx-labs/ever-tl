@@ -1,0 +1,22 @@
+[package]
+name = "ton_tl_codegen"
+version = "0.0.1"
+authors = [
+    "Aaron Gallagher <_@habnab.it>",
+    "Connie Hilarides <connorcpu@live.com>",
+    "Denis K. <denis.k@tonlabs.io>",
+    "Alexey Vavilin <alexey.v@tonlabs.io",
+]
+description = "Code generator for TL-schema"
+edition = "2018"
+
+[dependencies]
+proc-macro2 = "0.4.6"
+pom = "1.1.0"
+syn = "0.14.2"
+quote = "0.6.3"
+crc = "1.8.1"
+failure = "0.1.5"
+
+[features]
+default = []

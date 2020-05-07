@@ -1,0 +1,41 @@
+[package]
+name = "ton_api"
+version = "0.0.1"
+authors = [
+    "Aaron Gallagher <_@habnab.it>",
+    "Connie Hilarides <connorcpu@live.com>",
+    "Denis K. <denis.k@tonlabs.io>",
+    "Alexey Vavilin <alexey.v@tonlabs.io",
+]
+description = "Minimal wrappers for TON serialization using TL-schema"
+edition = "2018"
+
+[dependencies]
+byteorder = "1.3.4"
+erased-serde = "0.3.10"
+extfmt = "0.1.1"
+failure = "0.1.7"
+lazy_static = "1.4.0"
+rand = "0.4.2"
+serde = "1.0.105"
+serde_derive = "1.0.105"
+hex = "0.4.2"
+
+ton_block = { git = "https://github.com/tonlabs/ton-labs-block.git" }
+ton_types = { git = "https://github.com/tonlabs/ton-labs-types.git" }
+
+[dependencies.ordered-float]
+version = "1.0.2"
+features = ["serde"]
+
+[dependencies.secstr]
+version = "0.4.0"
+features = ["serde"]
+
+[build-dependencies]
+failure = "0.1.7"
+
+[build-dependencies.ton_tl_codegen]
+path = "../ton_tl_codegen"
+version = "0.0.1"
+features = []
