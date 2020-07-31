@@ -1,6 +1,7 @@
 #![allow(non_camel_case_types)]
 
 use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::io::{Read, Write};
 use std::marker::PhantomData;
 
@@ -128,6 +129,24 @@ impl TLObject {
 
 impl Clone for TLObject {
     fn clone(&self) -> Self {
+        unimplemented!()
+    }
+}
+
+impl Default for TLObject {
+    fn default() -> Self {
+        unimplemented!()
+    }
+}
+
+impl PartialEq for TLObject {
+    fn eq(&self, _other: &Self) -> bool {
+        unimplemented!()
+    }
+}
+
+impl Hash for TLObject {
+    fn hash<H: Hasher>(&self, _state: &mut H) {
         unimplemented!()
     }
 }
