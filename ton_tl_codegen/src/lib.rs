@@ -664,19 +664,15 @@ impl AllConstructors {
 
                 pub static ref BY_NUMBER:
                 ::std::collections::BTreeMap<crate::ConstructorNumber, &'static crate::DynamicDeserializer> =
-                {
                     ALL_DESERIALIZERS.iter()
                         .map(|d| (d.id, d))
-                        .collect()
-                };
+                        .collect();
 
                 pub static ref BY_NAME:
                 ::std::collections::BTreeMap<&'static str, &'static crate::DynamicDeserializer> =
-                {
                     ALL_DESERIALIZERS.iter()
                         .map(|d| (d.type_name, d))
-                        .collect()
-                };
+                        .collect();
             }
         }
     }
@@ -1994,7 +1990,7 @@ pub fn generate_code_for(input: &str, path: &Path) {
 
     let layer = constructors.layer as i32;
     let prelude = quote! {
-        #![allow(bare_trait_objects, unused_variables, unused_imports)]
+        #![allow(bare_trait_objects, unused_variables, unused_imports, non_snake_case)]
         pub use crate::ton_prelude::*;
 
         use serde_derive::{Serialize, Deserialize};
