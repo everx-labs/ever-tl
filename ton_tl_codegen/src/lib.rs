@@ -457,14 +457,28 @@ fn write_to_file(contents: String, filename: &Path, append: bool) {
 }
 
 fn reformat(filename: &Path) {
-    let status = Command::new("rustfmt")
+    static WARNING_PRINTED: AtomicBool = AtomicBool::new(false);
+    const INSTALL_INSTRUCTIONS: &str = "It's not an issue, the building will proceed. \
+        If you wish to develop using ton_api, you can install rustfmt by running command: \
+        `rustup component add rustfmt`";
+    let status = match Command::new("rustfmt")
         .arg("--edition")
         .arg("2018")
         .arg(filename)
         .status()
-        .expect("Failed to execute rustfmt");
+    {
+        Ok(status) => status,
+        Err(err) => {
+            if !WARNING_PRINTED.swap(true, Ordering::Relaxed) {
+                println!("cargo:warning=rustfmt failed to start: {:?}. {}", err, INSTALL_INSTRUCTIONS);
+            }
+            return;
+        }
+    };
     if !status.success() {
-        panic!("Rustfmt return code: {}", status.code().unwrap())
+        if !WARNING_PRINTED.swap(true, Ordering::Relaxed) {
+            println!("cargo:warning=rustfmt command returned code: {}. {}", status.code().unwrap(), INSTALL_INSTRUCTIONS);
+        }
     }
 }
 
