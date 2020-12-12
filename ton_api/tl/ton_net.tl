@@ -88,5 +88,7 @@ tonEngine.networkProtocol.test1 id:long hash:int256 = tonEngine.NetworkProtocol;
 tonEngine.networkProtocol.test2 id:long flag:Bool = tonEngine.NetworkProtocol;
 tonEngine.networkProtocol.test3 id:long port:int = tonEngine.NetworkProtocol;
 
+---functions---
+
 engine.validator.getBundle block_id:tonNode.blockIdExt = engine.validator.Success;
-engine.validator.getFutureBundle block_id:tonNode.blockIdExt = engine.validator.Success;
+engine.validator.getFutureBundle prev_block_ids:(vector tonNode.blockIdExt) = engine.validator.Success;
