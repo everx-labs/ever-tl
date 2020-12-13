@@ -30,3 +30,4 @@ fn main() {
     }
     ton_tl_codegen::generate_code_for(&input, Path::new(OUTPUT_DIR));
 }
+
