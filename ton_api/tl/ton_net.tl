@@ -83,12 +83,6 @@ tonEngine.networkProtocol.reflectToDbResponse
     result:long
 = tonEngine.NetworkProtocol;
 
-tonEngine.networkProtocol.validatorStatus
-    id:long
-    current:Bool
-    next:Bool
-= engine.validator.ValidatorStatus;
-
 tonEngine.networkProtocol.rawData id:long data:bytes = tonEngine.NetworkProtocol;
 tonEngine.networkProtocol.test1 id:long hash:int256 = tonEngine.NetworkProtocol;
 tonEngine.networkProtocol.test2 id:long flag:Bool = tonEngine.NetworkProtocol;
@@ -98,4 +92,3 @@ tonEngine.networkProtocol.test3 id:long port:int = tonEngine.NetworkProtocol;
 
 engine.validator.getBundle block_id:tonNode.blockIdExt = engine.validator.Success;
 engine.validator.getFutureBundle prev_block_ids:(vector tonNode.blockIdExt) = engine.validator.Success;
-engine.validator.getValidatorStatus = engine.validator.ValidatorStatus;
