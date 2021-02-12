@@ -6,7 +6,9 @@ const OUTPUT_DIR: &str = "src/ton";
 const TL_DIR: &str = "tl";
 
 fn main() {
-    println!("cargo:rerun-if-changed={}", OUTPUT_DIR);
+    // TODO: This line was commented because of different behavior of cargo in rust ver 1.50.
+    //       We can revert it, when this behavior is fixed.
+    // println!("cargo:rerun-if-changed={}", OUTPUT_DIR);
     println!("cargo:rerun-if-changed={}", TL_DIR);
     println!("cargo:rerun-if-changed=../ton_tl_codegen");
     let mut files = fs::read_dir(TL_DIR)
