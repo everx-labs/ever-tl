@@ -375,6 +375,7 @@ tonNode.blockBroadcast id:tonNode.blockIdExt catchain_seqno:int validator_set_ha
 tonNode.ihrMessageBroadcast message:tonNode.ihrMessage = tonNode.Broadcast;
 tonNode.externalMessageBroadcast message:tonNode.externalMessage = tonNode.Broadcast;
 tonNode.newShardBlockBroadcast block:tonNode.newShardBlock = tonNode.Broadcast;
+tonNode.connectivityCheckBroadcast pub_key:int256 padding:bytes = tonNode.Broadcast;
 
 tonNode.shardPublicOverlayId workchain:int shard:long zero_state_file_hash:int256 = tonNode.ShardPublicOverlayId;
 
