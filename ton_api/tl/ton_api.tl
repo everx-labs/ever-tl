@@ -434,6 +434,15 @@ tonNode.slave.sendExtMessage message:tonNode.externalMessage = tonNode.Success;
 
 tonNode.query = Object;
 
+// MBPP
+---types---
+mbpp.newMcBlockSome block:tonNode.blockBroadcast = mbpp.NewMcBlock;
+mbpp.newMcBlockNone = mbpp.NewMcBlock;
+mbpp.newShardBlock id:tonNode.blockIdExt cc_seqno:int tbd:bytes block:bytes = mbpp.NewShardBlock;
+---functions---
+mbpp.submitNewShardBlock block:mbpp.newShardBlock last_known_mc_block:int = mbpp.NewMcBlock;
+
+
 ---types---
 
 // bit 0 - started
