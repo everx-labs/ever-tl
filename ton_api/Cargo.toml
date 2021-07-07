@@ -1,6 +1,6 @@
 [package]
 name = "ton_api"
-version = "0.2.27"
+version = "0.2.68"
 authors = [
     "Aaron Gallagher <_@habnab.it>",
     "Connie Hilarides <connorcpu@live.com>",
