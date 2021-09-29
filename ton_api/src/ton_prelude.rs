@@ -8,8 +8,6 @@ use std::marker::PhantomData;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use extfmt::Hexlify;
 use ordered_float::OrderedFloat;
-use rand::{Rand, Rng};
-use serde;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{AnyBoxedSerialize, BareDeserialize, BareSerialize, BoxedDeserialize, BoxedSerialize, ConstructorNumber, Deserializer, Result, Serializer};
@@ -45,14 +43,6 @@ macro_rules! impl_byteslike {
 
         impl_byteslike!(@common $ty);
 
-        impl Rand for $ty {
-            fn rand<R: Rng>(rng: &mut R) -> Self {
-                let mut ret: Self = Default::default();
-                rng.fill_bytes(&mut ret.0);
-                ret
-            }
-        }
-
         impl BareDeserialize for $ty {
             fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
                 let mut ret: Self = Default::default();
@@ -62,6 +52,7 @@ macro_rules! impl_byteslike {
         }
 
         impl BareSerialize for $ty {
+            fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
             fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
                 ser.write_all(&self.0)?;
                 Ok(())
@@ -83,6 +74,7 @@ impl BareDeserialize for bytes {
 }
 
 impl BareSerialize for bytes {
+    fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
     fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
         ser.write_bare::<[u8]>(&self.0)
     }
@@ -177,19 +169,7 @@ impl BoxedSerialize for TLObject {
     }
 }
 
-impl serde::Serialize for TLObject {
-    fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
-        where S: serde::Serializer,
-    {
-        let (id, _) = self.0.serialize_boxed();
-        let tl_type_name = crate::ton::dynamic::BY_NUMBER.get(&id)
-            .map(|dynamic| dynamic.type_name)
-            .unwrap_or(&"<bogus>");
-        serializer.serialize_newtype_variant("TLObject", id.0, tl_type_name, &self.0)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct LengthPrefixed<T>(pub T);
 
 impl<T> From<T> for LengthPrefixed<T> {
@@ -212,6 +192,10 @@ impl<T> BareDeserialize for LengthPrefixed<T>
 impl<T> BareSerialize for LengthPrefixed<T>
     where T: BoxedSerialize,
 {
+    fn constructor(&self) -> crate::ConstructorNumber {
+        let inner = self.0.boxed_serialized_bytes().unwrap_or_default();
+        crate::ConstructorNumber(inner.len() as u32)
+    }
     fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
         let inner = self.0.boxed_serialized_bytes()?;
         ser.write_i32::<LittleEndian>(inner.len() as i32)?;
@@ -221,6 +205,7 @@ impl<T> BareSerialize for LengthPrefixed<T>
 }
 
 impl BareSerialize for () {
+    fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
     fn serialize_bare(&self, _ser: &mut Serializer) -> Result<()> {
         Ok(())
     }
@@ -273,6 +258,7 @@ impl BareDeserialize for String {
 }
 
 impl BareSerialize for String {
+    fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
     fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
         ser.write_bare::<[u8]>(self.as_bytes())?;
         Ok(())
@@ -345,31 +331,6 @@ impl<Det, T> fmt::Debug for Vector<Det, T>
     }
 }
 
-impl<Det, T> serde::Serialize for Vector<Det, T>
-    where T: serde::Serialize,
-{
-    fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
-        where S: serde::Serializer,
-    {
-        use serde::ser::SerializeSeq;
-        let mut seq = serializer.serialize_seq(Some(self.0.len()))?;
-        for item in &self.0 {
-            seq.serialize_element(item)?;
-        }
-        seq.end()
-    }
-}
-
-impl<'de, Det, T> serde::Deserialize<'de> for Vector<Det, T>
-    where T: serde::Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> ::std::result::Result<Self, D::Error>
-        where D: serde::Deserializer<'de>,
-    {
-        Ok(Vector(serde::Deserialize::deserialize(deserializer)?, PhantomData))
-    }
-}
-
 const VECTOR_CONSTRUCTOR: ConstructorNumber = ConstructorNumber(0x1cb5c415);
 
 macro_rules! impl_vector {
@@ -417,6 +378,7 @@ macro_rules! impl_vector {
         impl<T> BareSerialize for Vector<$det, T>
             where T: $det_ser,
         {
+            fn constructor(&self) -> crate::ConstructorNumber { VECTOR_CONSTRUCTOR }
             fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
                 ser.write_i32::<LittleEndian>(self.0.len() as i32)?;
                 for item in &self.0 {
@@ -462,6 +424,7 @@ impl BareDeserialize for Vec<u8> {
 }
 
 impl BareSerialize for [u8] {
+    fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
     fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
         let len = self.len();
         let mut have_written = if len < 254 {
@@ -495,6 +458,7 @@ macro_rules! impl_tl_primitive {
         }
 
         impl BareSerialize for $ptype {
+            fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
             fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
                 ser.$write::<LittleEndian>(*self)?;
                 Ok(())
@@ -517,6 +481,7 @@ impl BareDeserialize for double {
 }
 
 impl BareSerialize for double {
+    fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
     fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
         ser.write_f64::<LittleEndian>(self.0)?;
         Ok(())
