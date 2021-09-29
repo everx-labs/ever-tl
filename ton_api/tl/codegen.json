@@ -1,0 +1,8 @@
+{
+  "exclude_types": ["TestObject", "testObject", "testInt", "testString", "testVectorBytes", "getTestObject"],
+  "need_box": ["ConfirmValidation"],
+  "need_determiner": [],
+  "additional_derives": {
+    "BlockIdExt": ["Hash", "Serialize", "Deserialize"]
+  }
+}

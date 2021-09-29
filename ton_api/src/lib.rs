@@ -8,9 +8,7 @@ use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
-use erased_serde::serialize_trait_object;
 use failure::Fail;
-use serde_derive::{Deserialize, Serialize};
 
 use ton_block::ShardIdent;
 pub use ton_types::Result;
@@ -30,7 +28,7 @@ pub mod secure;
 mod ton_prelude;
 
 /// Struct representing TL constructor number (CRC32 calculated from constructor definition string)
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstructorNumber(pub u32);
 
 impl fmt::Debug for ConstructorNumber {
@@ -120,24 +118,16 @@ where Self: Sized,
 }
 
 /// Trait for deserializing any value represented `Object` TL type
-pub trait BoxedDeserializeDynamic: BoxedDeserialize + for<'de> serde::Deserialize<'de> {
+pub trait BoxedDeserializeDynamic: BoxedDeserialize {
     /// Read boxed type value with given `ConstructorNumber` using `Deserializer`
     fn boxed_deserialize_to_box(id: ConstructorNumber, de: &mut Deserializer) -> Result<ton::TLObject>;
-
-    /// Read boxed type value using `serde::Deserializer`
-    fn serde_deserialize_to_box(de: &mut dyn erased_serde::Deserializer) -> ::std::result::Result<ton::TLObject, erased_serde::Error>;
 }
 
 impl<D> BoxedDeserializeDynamic for D
-where D: BoxedDeserialize + for<'de> serde::Deserialize<'de> + AnyBoxedSerialize,
+where D: BoxedDeserialize + AnyBoxedSerialize,
 {
     fn boxed_deserialize_to_box(id: ConstructorNumber, de: &mut Deserializer) -> Result<ton::TLObject> {
         Ok(ton::TLObject::new(D::deserialize_boxed(id, de)?))
-    }
-
-    fn serde_deserialize_to_box(de: &mut dyn erased_serde::Deserializer) -> ::std::result::Result<ton::TLObject, erased_serde::Error>
-    {
-        Ok(ton::TLObject::new(erased_serde::deserialize::<D>(de)?))
     }
 }
 
@@ -192,6 +182,14 @@ impl<'w> Serializer<'w> {
         self.write_bare(bare)?;
         Ok(())
     }
+
+    #[inline(always)]
+    pub fn write_into_boxed<S: BareSerialize>(&mut self, obj: &S) -> Result<()> {
+        let constructor = obj.constructor();
+        self.write_constructor(constructor)?;
+        self.write_bare(obj)?;
+        Ok(())
+    }
 }
 
 impl<'w> io::Write for Serializer<'w> {
@@ -206,6 +204,9 @@ impl<'w> io::Write for Serializer<'w> {
 
 /// Trait for bare type serialization
 pub trait BareSerialize {
+    /// Get constructor id for object (tl_id)
+    fn constructor(&self) -> crate::ConstructorNumber;
+
     /// Write object as bare-serialized value using `Serializer`
     fn serialize_bare(&self, ser: &mut Serializer) -> Result<()>;
 
@@ -237,20 +238,18 @@ pub trait IntoBoxed: BareSerialize {
 }
 
 /// Trait for representing any boxed type used in `Object` TL type processing
-pub trait AnyBoxedSerialize: Any + Send + Sync + BoxedSerialize + erased_serde::Serialize {
+pub trait AnyBoxedSerialize: Any + Send + Sync + BoxedSerialize {
     fn as_any(&self) -> &dyn Any;
     fn into_boxed_any(self: Box<Self>) -> Box<dyn Any + Send>;
 }
 
-impl<T: Any + Send + Sync + BoxedSerialize + erased_serde::Serialize> AnyBoxedSerialize for T {
+impl<T: Any + Send + Sync + BoxedSerialize> AnyBoxedSerialize for T {
     fn as_any(&self) -> &dyn Any { self }
     fn into_boxed_any(self: Box<Self>) -> Box<dyn Any + Send> { self }
 }
 
-serialize_trait_object!(AnyBoxedSerialize);
-
 /// Trait for functional TL types
-pub trait Function: AnyBoxedSerialize + serde::Serialize {
+pub trait Function: AnyBoxedSerialize {
     type Reply: BoxedDeserialize + AnyBoxedSerialize;
 }
 

@@ -2,12 +2,11 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 
 use ::secstr::*;
-use serde_derive::{Deserialize, Serialize};
 
 use crate::{BareDeserialize, BareSerialize};
 
 /// SecureBytes built-in type.
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq)]
 pub struct SecureBytes(SecVec<u8>);
 
 impl SecureBytes {
@@ -56,6 +55,7 @@ impl Hash for SecureBytes {
 }
 
 impl BareSerialize for SecureBytes {
+    fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
     fn serialize_bare(&self, ser: &mut crate::Serializer) -> crate::Result<()> {
         self.0.unsecure().serialize_bare(ser)
     }

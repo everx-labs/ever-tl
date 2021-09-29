@@ -12,8 +12,10 @@ fn main() {
         .map(|d| d.path())
         .filter(|path| path.to_str().unwrap().ends_with(".tl"))
         .collect::<Vec<path::PathBuf>>();
+
     assert!(files.len() > 0);
     files.sort();
+
     let mut input = String::new();
     for file in files {
         if input.len() > 0 {
@@ -22,6 +24,7 @@ fn main() {
         fs::File::open(&file).unwrap()
             .read_to_string(&mut input).unwrap();
     }
-    ton_tl_codegen::generate_code_for(&input, Path::new(OUTPUT_DIR));
+
+    ton_tl_codegen::generate_code_for(None, &input, Path::new(OUTPUT_DIR));
 }
 
