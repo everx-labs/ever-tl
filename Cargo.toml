@@ -1,5 +1,7 @@
+
 [workspace]
+
 members = [
-    "ton_api",
-    "ton_tl_codegen",
+	'ton_api',
+	'ton_tl_codegen',
 ]
