@@ -2,7 +2,7 @@
 [package]
 
 name = 'ton_api'
-version = '0.2.110'
+version = '0.2.111'
 authors = [
 	'Aaron Gallagher <_@habnab.it>',
 	'Connie Hilarides <connorcpu@live.com>',
@@ -23,8 +23,8 @@ serde = '1.0'
 serde_derive = '1.0'
 secstr = '0.4'
 hex = '0.4'
-ton_block = { git = 'https://github.com/tonlabs/ton-labs-block.git', tag = '1.7.27' }
-ton_types = { git = 'https://github.com/tonlabs/ton-labs-types.git', tag = '1.10.10' }
+ton_block = { git = 'https://github.com/tonlabs/ton-labs-block.git', tag = '1.7.29' }
+ton_types = { git = 'https://github.com/tonlabs/ton-labs-types.git', tag = '1.10.11' }
 
 [build-dependencies]
 
