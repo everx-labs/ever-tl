@@ -104,12 +104,13 @@ impl From<Vec<u8>> for bytes {
 pub struct int128(pub [u8; 16]);
 
 /// Represents 256-bit unsigned integer.
-#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
-pub struct int256(pub [u8; 32]);
+//#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
+//pub struct int256(pub [u8; 32]);
+pub(crate) type int256 = ton_types::UInt256;
 
 impl_byteslike!(@common bytes);
 impl_byteslike!(@arraylike int128);
-impl_byteslike!(@arraylike int256);
+//impl_byteslike!(@arraylike int256);
 
 /// Represents base TL-object type.
 pub struct TLObject(Box<dyn AnyBoxedSerialize>);

@@ -14,20 +14,12 @@
 #![allow(clippy::unreadable_literal)]
 #![deny(private_in_public)]
 
-use std::{fmt, io};
-use std::any::Any;
-use std::cmp::Ordering;
-use std::convert::TryInto;
-use std::fmt::{Display, Formatter};
-use std::hash::Hash;
-
 use failure::Fail;
+use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}};
 
-use ton_block::ShardIdent;
-pub use ton_types::Result;
+use ton_block::{BlockIdExt, ShardIdent};
+use ton_types::Result;
 use ton_types::UInt256;
-
-use crate::ton::ton_node::blockidext::BlockIdExt;
 
 macro_rules! _invalid_id {
     ($id:ident) => {
@@ -60,12 +52,12 @@ pub struct InvalidConstructor {
 
 /// Struct for deserializing TL-scheme objects from any `io::Read`
 pub struct Deserializer<'r> {
-    reader: &'r mut dyn io::Read,
+    reader: &'r mut dyn Read,
 }
 
 impl<'r> Deserializer<'r> {
     /// Create `Deserializer` with given `io::Read` trait object
-    pub fn new(reader: &'r mut dyn io::Read) -> Self {
+    pub fn new(reader: &'r mut dyn Read) -> Self {
         Deserializer { reader }
     }
 
@@ -95,7 +87,7 @@ impl<'r> Deserializer<'r> {
     }
 }
 
-impl<'r> io::Read for Deserializer<'r> {
+impl<'r> Read for Deserializer<'r> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         self.reader.read(buf)
     }
@@ -165,12 +157,12 @@ impl DynamicDeserializer {
 
 /// Struct for serializing TL-scheme objects into any `io::Write`
 pub struct Serializer<'w> {
-    writer: &'w mut dyn io::Write,
+    writer: &'w mut dyn Write,
 }
 
 impl<'w> Serializer<'w> {
     /// Create `Serializer` with given `io::Write` trait object
-    pub fn new(writer: &'w mut dyn io::Write) -> Self {
+    pub fn new(writer: &'w mut dyn Write) -> Self {
         Serializer { writer }
     }
 
@@ -205,7 +197,7 @@ impl<'w> Serializer<'w> {
     }
 }
 
-impl<'w> io::Write for Serializer<'w> {
+impl<'w> Write for Serializer<'w> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.writer.write(buf)
     }
@@ -266,85 +258,70 @@ pub trait Function: AnyBoxedSerialize {
     type Reply: BoxedDeserialize + AnyBoxedSerialize;
 }
 
-impl PartialOrd for BlockIdExt {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+impl BareDeserialize for BlockIdExt {
+    fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
+        let shard = ShardIdent::with_tagged_prefix(
+            de.read_bare::<crate::ton::int>()?,
+            de.read_bare::<crate::ton::long>()? as u64
+        )?;
+        let ret = Self::with_params(
+            shard, 
+            de.read_bare::<crate::ton::int>()? as u32, 
+            de.read_bare::<UInt256>()?,
+            de.read_bare::<UInt256>()? 
+        );
+        Ok(ret)
     }
 }
 
-impl Ord for BlockIdExt {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.workchain.cmp(&other.workchain)
-            .then(self.shard.cmp(&other.shard))
-            .then(self.seqno.cmp(&other.seqno))
-            .then(self.root_hash.cmp(&other.root_hash))
-            .then(self.file_hash.cmp(&other.file_hash))
+impl BareSerialize for BlockIdExt {
+    fn constructor(&self) -> ConstructorNumber {
+        crate::ton::ton_node::blockidext::TL_TAG
+    }
+    fn serialize_bare(&self, se: &mut Serializer) -> Result<()> {
+        let shard = self.shard();
+        se.write_bare::<crate::ton::int>(&shard.workchain_id())?;
+        se.write_bare::<crate::ton::long>(&(shard.shard_prefix_with_tag() as i64))?;
+        se.write_bare::<crate::ton::int>(&(self.seq_no() as i32))?;
+        se.write_bare::<UInt256>(self.root_hash())?;
+        se.write_bare::<UInt256>(self.file_hash())?;
+        Ok(())
     }
 }
 
-impl Display for BlockIdExt {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "({}:{:016x}, {}, rh {}, fh {})", self.workchain, self.shard, self.seqno, hex::encode(self.root_hash.0), hex::encode(self.file_hash.0))
+impl BoxedDeserialize for BlockIdExt {
+    fn possible_constructors() -> Vec<crate::ConstructorNumber> {
+        vec![crate::ton::ton_node::blockidext::TL_TAG]
     }
-}
-
-impl From<&ton_block::BlockIdExt> for BlockIdExt {
-    fn from(block_id_ext: &ton_block::BlockIdExt) -> Self {
-        Self {
-            workchain: block_id_ext.shard().workchain_id(),
-            shard: block_id_ext.shard().shard_prefix_with_tag() as i64,
-            seqno: block_id_ext.seq_no() as i32,
-            root_hash: block_id_ext.root_hash().into(),
-            file_hash: block_id_ext.file_hash().into(),
+    fn deserialize_boxed(id: ConstructorNumber, de: &mut Deserializer) -> Result<Self> {
+        if id == crate::ton::ton_node::blockidext::TL_TAG {
+            de.read_bare()
+        } else {
+            _invalid_id!(id)
         }
     }
 }
 
-impl From<ton_block::BlockIdExt> for BlockIdExt {
-    fn from(block_id_ext: ton_block::BlockIdExt) -> Self {
-        Self::from(&block_id_ext)
+impl BoxedSerialize for BlockIdExt {
+    fn serialize_boxed(&self) -> (ConstructorNumber, &dyn BareSerialize) {
+        (crate::ton::ton_node::blockidext::TL_TAG, self)
     }
 }
 
-impl TryInto<ton_block::BlockIdExt> for &BlockIdExt {
-    type Error = failure::Error;
-
-    fn try_into(self) -> Result<ton_block::BlockIdExt> {
-        Ok(ton_block::BlockIdExt::with_params(
-            ShardIdent::with_tagged_prefix(self.workchain, self.shard as u64)?,
-            self.seqno as u32,
-            self.root_hash.into(),
-            self.file_hash.into(),
-        ))
+impl BareDeserialize for UInt256 {
+    fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
+        let mut data = [0u8; 32];
+        de.read_exact(&mut data)?;
+        Ok(Self::with_array(data))
     }
 }
 
-impl Display for crate::ton::int256 {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}", hex::encode(self.0))
+impl BareSerialize for UInt256 {
+    fn constructor(&self) -> ConstructorNumber { 
+        unreachable!() 
     }
-}
-
-impl From<UInt256> for crate::ton::int256 {
-    fn from(value: UInt256) -> Self {
-        Self(value.into())
-    }
-}
-
-impl From<&UInt256> for crate::ton::int256 {
-    fn from(value: &UInt256) -> Self {
-        Self(value.clone().into())
-    }
-}
-
-impl Into<UInt256> for crate::ton::int256 {
-    fn into(self) -> UInt256 {
-        UInt256::from(self.0)
-    }
-}
-
-impl Into<UInt256> for &crate::ton::int256 {
-    fn into(self) -> UInt256 {
-        UInt256::from(self.0)
+    fn serialize_bare(&self, se: &mut Serializer) -> Result<()> {
+        se.write_all(self.as_slice())?;
+        Ok(())
     }
 }
