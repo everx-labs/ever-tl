@@ -1422,7 +1422,7 @@ impl Constructor<TypeIR, FieldIR> {
         let derives = gen_derives(config, quote! { Debug, Default, Clone, PartialEq }, name.to_string());
         let impl_generics = self.impl_generics();
         let fields = self.fields_tokens(quote! {pub}, quote! {;});
-
+ 
         quote! {
             #[derive(#derives)]
             #[doc = #doc]
@@ -1534,6 +1534,13 @@ impl Constructor<TypeIR, FieldIR> {
     }
 
     fn as_variant_type_struct(&self, config: &Option<Config>, matched: &str) -> Tokens {
+        if self.variant_name() == "BlockIdExt" {
+            let tl_id = self.tl_id().unwrap();
+            return quote! {
+                pub(crate) type BlockIdExt = ton_block::BlockIdExt;
+                pub(crate) const TL_TAG: crate::ConstructorNumber = #tl_id; 
+            }
+        }
         if self.fields.is_empty() {
             quote!()
         } else {
@@ -2065,6 +2072,11 @@ impl Constructors<TypeIR, FieldIR> {
         }
         let name = self.first_constructor().output.name();
         let doc = self.as_enum_doc();
+        if name == "BlockIdExt" {
+            return quote! {
+                pub(crate) type BlockIdExt = ton_block::BlockIdExt;
+            }
+        }
         let derives = gen_derives(config, quote! { Debug, Clone, PartialEq }, name.to_string());
         let variants = self.0.iter()
             .map(|cm| cm.0.as_variant());
