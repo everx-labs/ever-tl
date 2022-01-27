@@ -14,12 +14,13 @@
 #![allow(clippy::unreadable_literal)]
 #![deny(private_in_public)]
 
+use crate::ton_prelude::TLObject;
 use failure::Fail;
 use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}};
 
 use ton_block::{BlockIdExt, ShardIdent};
 use ton_types::Result;
-use ton_types::UInt256;
+use ton_types::{fail, UInt256};
 
 macro_rules! _invalid_id {
     ($id:ident) => {
@@ -323,5 +324,94 @@ impl BareSerialize for UInt256 {
     fn serialize_bare(&self, se: &mut Serializer) -> Result<()> {
         se.write_all(self.as_slice())?;
         Ok(())
+    }
+}
+
+// Deserialize boxed TL object from bytes
+pub fn deserialize_boxed(bytes: &[u8]) -> Result<TLObject> {
+    let mut reader = bytes;
+    Deserializer::new(&mut reader).read_boxed::<TLObject>()
+}
+
+/// Deserialize bundle of boxed TL objects from bytes
+pub fn deserialize_boxed_bundle(bytes: &[u8]) -> Result<Vec<TLObject>> {
+    let mut reader = bytes;
+    let mut de = Deserializer::new(&mut reader);
+    let mut ret = Vec::new();
+    loop {
+        match de.read_boxed::<TLObject>() {
+            Ok(object) => ret.push(object),
+            Err(_) => if ret.is_empty() {
+                fail!("Deserialization error")
+            } else {
+                break
+            }
+        }
+    }
+    Ok(ret)
+}
+
+/// Serialize boxed TL object into bytes
+pub fn serialize_boxed<T: BoxedSerialize>(object: &T) -> Result<Vec<u8>> {
+    let mut ret = Vec::new();
+    Serializer::new(&mut ret).write_boxed(object)?;
+    Ok(ret)
+}
+
+/// Serialize boxed TL object into bytes with appending
+pub fn serialize_boxed_append<T: BoxedSerialize>(buf: &mut Vec<u8>, object: &T) -> Result<()> {
+    Serializer::new(buf).write_boxed(object)?;
+    Ok(())
+}
+
+/// Serialize boxed TL object into bytes in-place
+pub fn serialize_boxed_inplace<T: BoxedSerialize>(buf: &mut Vec<u8>, object: &T) -> Result<()> {
+    buf.truncate(0); 
+    serialize_boxed_append(buf, object)
+}
+
+/// Serialize non-boxed TL object into bytes
+pub fn serialize_bare<T: BareSerialize>(object: &T) -> Result<Vec<u8>> {
+    let mut buf = Vec::new();
+    Serializer::new(&mut buf).write_into_boxed(object)?;
+    Ok(buf)
+}
+
+/// Serialize non-boxed TL object into bytes in-place
+pub fn serialize_bare_inplace<T: BareSerialize>(buf: &mut Vec<u8>, object: &T) -> Result<()> {
+    buf.truncate(0);
+    Serializer::new(buf).write_into_boxed(object)
+}
+
+/// Get TL tag from non-boxed object
+pub fn tag_from_bare_object<T: BareSerialize>(object: &T) -> u32 {
+    let ConstructorNumber(tag) = object.constructor();
+    tag
+}
+
+/// Get TL tag from non-boxed type
+pub fn tag_from_bare_type<T: Default + IntoBoxed>() -> u32 {
+    let (ConstructorNumber(tag), _) = T::default().into_boxed().serialize_boxed();
+    tag
+}
+
+/// Get TL tag from boxed object
+pub fn tag_from_boxed_object<T: BoxedSerialize>(object: &T) -> u32 {
+    let (ConstructorNumber(tag), _) = object.serialize_boxed();
+    tag
+}
+
+/// Get TL tag from boxed type
+pub fn tag_from_boxed_type<T: Default + BoxedSerialize>() -> u32 {
+    let (ConstructorNumber(tag), _) = T::default().serialize_boxed();
+    tag
+}
+
+/// Get TL tag from data bytes
+pub fn tag_from_data(data: &[u8]) -> u32 {
+    if data.len() < 4 {
+        0
+    } else {
+        u32::from_le_bytes([data[0], data[1], data[2], data[3]])
     }
 }

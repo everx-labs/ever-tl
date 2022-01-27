@@ -13,18 +13,17 @@
 
 #![allow(non_camel_case_types)]
 
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::io::{Read, Write};
-use std::marker::PhantomData;
+use crate::{
+    AnyBoxedSerialize, BareDeserialize, BareSerialize, BoxedDeserialize, BoxedSerialize, 
+    ConstructorNumber, Deserializer, Result, Serializer, ton::Bool
+};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use extfmt::Hexlify;
 use ordered_float::OrderedFloat;
 use serde_derive::{Deserialize, Serialize};
-
-use crate::{AnyBoxedSerialize, BareDeserialize, BareSerialize, BoxedDeserialize, BoxedSerialize, ConstructorNumber, Deserializer, Result, Serializer};
-use crate::ton::Bool;
+use std::{any::type_name, fmt, hash::{Hash, Hasher}, io::{Read, Write}, marker::PhantomData};
+use ton_types::error;
 
 const MAX_BYTES_DEBUG_LEN: usize = 4;
 
@@ -370,7 +369,11 @@ macro_rules! impl_vector {
         {
             fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
                 let count = de.read_i32::<LittleEndian>()?;
-                let mut ret = Vec::with_capacity(count as usize);
+                let mut ret = Vec::new();
+                ret.try_reserve_exact(count as usize)
+                    .map_err(
+                        |e| error!("count {} is too big for {}: {}", count, type_name::<Self>(), e)
+                    )?;
                 for _ in 0..count {
                     ret.push(de.$read_method()?);
                 }
@@ -425,7 +428,12 @@ impl BareDeserialize for Vec<u8> {
             (de.read_u24::<LittleEndian>()? as usize, 4)
         };
 
-        let mut buf = vec![0; len];
+        let mut buf = Vec::new();
+        buf.try_reserve_exact(len)
+            .map_err(
+                |e| error!("count {} is too big for {}: {}", len, type_name::<Self>(), e)
+            )?;
+        buf.resize(len, 0);
         de.read_exact(&mut buf)?;
         have_read += len;
         let remainder = have_read % 4;
