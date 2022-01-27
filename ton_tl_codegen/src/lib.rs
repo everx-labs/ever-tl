@@ -595,6 +595,7 @@ pub struct Config {
     exclude_types: HashSet<String>,
     need_box: HashSet<String>,
     need_determiner: HashSet<String>,
+    replace_with_bytes: HashSet<String>,
     additional_derives: HashMap<String, Vec<String>>,
 }
 
@@ -1319,18 +1320,10 @@ impl Constructor<Type, Field> {
     }
 
     fn resolved_fields(&self, config: &Option<Config>, resolve_map: &TypeResolutionMap) -> Vec<FieldIR> {
-        let replace_string_with_bytes = match self.original_variant.as_str() {
-            // types
-            "resPQ" |
-            "p_q_inner_data" |
-            "p_q_inner_data_temp" |
-            "server_DH_params_ok" |
-            "server_DH_inner_data" |
-            "client_DH_inner_data" |
-            // functions
-            "req_DH_params" |
-            "set_client_DH_params" => true,
-            _ => false,
+        let replace_string_with_bytes = if let Some(config) = config {
+            config.replace_with_bytes.contains(&self.original_variant)
+        } else {
+            false
         };
 
         let mut ret: Vec<_> = self.fields.iter()
