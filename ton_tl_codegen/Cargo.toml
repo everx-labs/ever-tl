@@ -1,9 +1,9 @@
 [package]
+name = 'ton_tl_codegen'
+version = '0.0.2'
 authors = [ 'Aaron Gallagher <_@habnab.it>', 'Connie Hilarides <connorcpu@live.com>', 'Denis K. <denis.k@tonlabs.io>', 'Alexey Vavilin <alexey.v@tonlabs.io' ]
 description = 'Code generator for TL-schema'
 edition = '2018'
-name = 'ton_tl_codegen'
-version = '0.0.2'
 
 [dependencies]
 crc = '1.8'
@@ -18,4 +18,3 @@ syn = '1.0'
 [features]
 default = [ 'reformat' ]
 reformat = [  ]
-
