@@ -20,8 +20,8 @@ ordered-float = '2.8'
 secstr = '0.4'
 serde = '1.0'
 serde_derive = '1.0'
-ton_block = { path = '/tonlabs/ton-labs-block' }
-ton_types = { path = '/tonlabs/ton-labs-types' }
+ton_block = { git = 'https://github.com/tonlabs/ton-labs-block', tag = '1.7.41' }
+ton_types = { git = 'https://github.com/tonlabs/ton-labs-types', tag = '1.10.13' }
 
 [dev-dependencies]
 base64 = '0.13'
