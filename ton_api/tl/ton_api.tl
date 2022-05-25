@@ -366,6 +366,30 @@ tonNode.data data:bytes = tonNode.Data;
 
 tonNode.ihrMessage data:bytes = tonNode.IhrMessage;
 tonNode.externalMessage data:bytes = tonNode.ExternalMessage;
+tonNode.rempMessage message:bytes id:int256 timestamp:long signature:bytes = tonNode.RempMessage;
+tonNode.rmqNew = tonNode.RmqRecordStatus;
+tonNode.rmqRejected block_id:tonNode.blockIdExt error:string = tonNode.RmqRecordStatus;
+tonNode.rmqAccepted block_id:tonNode.blockIdExt = tonNode.RmqRecordStatus;
+tonNode.rmqRecord message:bytes message_id:int256 source_key_id:int256 source_idx:int status:tonNode.RmqRecordStatus = tonNode.rmqRecord;
+
+tonNode.rempFullnode = tonNode.RempMessageLevel;
+tonNode.rempQueue = tonNode.RempMessageLevel;
+tonNode.rempCollator = tonNode.RempMessageLevel;
+tonNode.rempShardchain = tonNode.RempMessageLevel;
+tonNode.rempMasterchain = tonNode.RempMessageLevel;
+
+tonNode.rempSentToValidators sent_to:int total_validators:int = tonNode.RempMessageStatus;
+tonNode.rempNew = tonNode.RempMessageStatus;
+tonNode.rempRejected level:tonNode.RempMessageLevel block_id:tonNode.blockIdExt error:string = tonNode.RempMessageStatus;
+tonNode.rempAccepted level:tonNode.RempMessageLevel block_id:tonNode.blockIdExt master_id:tonNode.blockIdExt = tonNode.RempMessageStatus;
+tonNode.rempIgnored level:tonNode.RempMessageLevel block_id:tonNode.blockIdExt = tonNode.RempMessageStatus;
+tonNode.rempDuplicate block_id:tonNode.blockIdExt = tonNode.RempMessageStatus;
+tonNode.rempTimeout = tonNode.RempMessageStatus;
+
+tonNode.rempReceived = tonNode.RempReceived;
+tonNode.rempReceipt message_id:int256 status:tonNode.RempMessageStatus timestamp:long source_id:int256 = tonNode.RempReceipt;
+
+tonNode.rempSignedReceipt receipt:bytes signature:bytes = tonNode.RempSignedReceipt;
 
 tonNode.newShardBlock block:tonNode.blockIdExt cc_seqno:int data:bytes = tonNode.NewShardBlock;
 

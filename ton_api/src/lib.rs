@@ -14,7 +14,7 @@
 #![allow(clippy::unreadable_literal)]
 #![deny(private_in_public)]
 
-use crate::ton_prelude::TLObject;
+use crate::{ton_prelude::TLObject, ton::ton_node::RempMessageStatus};
 use failure::Fail;
 use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}};
 
@@ -324,6 +324,34 @@ impl BareSerialize for UInt256 {
     fn serialize_bare(&self, se: &mut Serializer) -> Result<()> {
         se.write_all(self.as_slice())?;
         Ok(())
+    }
+}
+
+impl fmt::Display for RempMessageStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RempMessageStatus::TonNode_RempNew => write!(f, "New"),
+            RempMessageStatus::TonNode_RempAccepted(a) =>
+                if a.master_id.seq_no() == 0 {
+                    write!(f, "Accepted by {:?}, block {}", a.level, a.block_id)
+                } else {
+                    write!(f, "Accepted by {:?}, block {}, masterblock {}", a.level, a.block_id, a.master_id)
+                }
+            RempMessageStatus::TonNode_RempRejected(r) =>
+                write!(f, "Rejected by {:?}, block {}, reason `{}`", r.level, r.block_id, r.error),
+            RempMessageStatus::TonNode_RempIgnored(i) => {
+                if i.block_id.seq_no() == 0 {
+                    write!(f, "Ignored by {:?}", i.level)
+                } else {
+                    write!(f, "Ignored by {:?}, block {}", i.level, i.block_id)
+                }
+            }
+            RempMessageStatus::TonNode_RempTimeout => write!(f, "Timeout"),
+            RempMessageStatus::TonNode_RempDuplicate(d) =>
+                write!(f, "Duplicate, see block {}", d.block_id),
+            RempMessageStatus::TonNode_RempSentToValidators(s) =>
+                write!(f, "Sent to validators, sent to {}, total validators {}", s.sent_to, s.total_validators)
+        }
     }
 }
 
