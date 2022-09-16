@@ -54,12 +54,16 @@ pub struct InvalidConstructor {
 /// Struct for deserializing TL-scheme objects from any `io::Read`
 pub struct Deserializer<'r> {
     reader: &'r mut dyn Read,
+    pos: usize
 }
 
 impl<'r> Deserializer<'r> {
     /// Create `Deserializer` with given `io::Read` trait object
     pub fn new(reader: &'r mut dyn Read) -> Self {
-        Deserializer { reader }
+        Deserializer { 
+            reader,
+            pos: 0 
+        }
     }
 
     /// Read `ConstructorNumber` from reader
@@ -90,7 +94,12 @@ impl<'r> Deserializer<'r> {
 
 impl<'r> Read for Deserializer<'r> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.reader.read(buf)
+        self.reader.read(buf).map(
+            |read| {
+                self.pos += read;
+                read
+            }
+        )
     }
 }
 
@@ -377,6 +386,28 @@ pub fn deserialize_boxed_bundle(bytes: &[u8]) -> Result<Vec<TLObject>> {
         }
     }
     Ok(ret)
+}
+
+/// Deserialize bundle of boxed TL objects with some suffix from bytes
+pub fn deserialize_boxed_bundle_with_suffix(bytes: &[u8]) -> Result<(Vec<TLObject>, usize)> {
+    let mut reader = bytes;
+    let mut de = Deserializer::new(&mut reader);
+    let mut ret = Vec::new();
+    let mut pos = 0;
+    loop {
+        match de.read_boxed::<TLObject>() {
+            Ok(object) => {
+                ret.push(object);
+                pos = de.pos;
+            },
+            Err(_) => if ret.is_empty() {
+                fail!("Deserialization error")
+            } else {
+                break
+            }
+        }
+    }
+    Ok((ret, pos))
 }
 
 /// Serialize boxed TL object into bytes
