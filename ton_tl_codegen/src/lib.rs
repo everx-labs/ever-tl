@@ -29,6 +29,8 @@ use quote::{quote, TokenStreamExt};
 use serde_derive::Deserialize;
 use proc_macro2::{Spacing, Punct};
 
+#[cfg(test)]
+mod tests;
 
 pub mod parser {
     use std::cmp::Ordering;
