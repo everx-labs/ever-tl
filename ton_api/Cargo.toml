@@ -5,11 +5,6 @@ edition = '2018'
 name = 'ton_api'
 version = '0.2.132'
 
-[build-dependencies]
-failure = '0.1.7'
-serde_json = '1.0.52'
-ton_tl_codegen = { path = '../ton_tl_codegen' }
-
 [dependencies]
 byteorder = '1.4'
 extfmt = '0.1'
@@ -22,3 +17,9 @@ serde = '1.0'
 serde_derive = '1.0'
 ton_block = { git = 'https://github.com/tonlabs/ton-labs-block.git', tag = '1.8.3' }
 ton_types = { git = 'https://github.com/tonlabs/ton-labs-types.git', tag = '1.11.4' }
+
+[build-dependencies]
+failure = '0.1.7'
+serde_json = '1.0.52'
+ton_tl_codegen = { path = '../ton_tl_codegen' }
+
