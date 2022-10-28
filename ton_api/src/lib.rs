@@ -14,13 +14,12 @@
 #![allow(clippy::unreadable_literal)]
 #![deny(private_in_public)]
 
-use crate::{ton_prelude::TLObject, ton::ton_node::RempMessageStatus};
+use crate::{ton_prelude::TLObject, ton::ton_node::{RempMessageStatus, RempMessageLevel}};
 use failure::Fail;
-use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}};
+use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}, convert::TryFrom};
 
 use ton_block::{BlockIdExt, ShardIdent};
-use ton_types::Result;
-use ton_types::{fail, UInt256};
+use ton_types::{fail, Result, UInt256};
 
 macro_rules! _invalid_id {
     ($id:ident) => {
@@ -360,6 +359,32 @@ impl fmt::Display for RempMessageStatus {
                 write!(f, "Duplicate, see block {}", d.block_id),
             RempMessageStatus::TonNode_RempSentToValidators(s) =>
                 write!(f, "Sent to validators, sent to {}, total validators {}", s.sent_to, s.total_validators)
+        }
+    }
+}
+
+impl TryFrom<u8> for RempMessageLevel {
+    type Error = failure::Error;
+    fn try_from(value: u8) -> Result<Self> {
+        Ok(match value {
+            1 => RempMessageLevel::TonNode_RempCollator,
+            2 => RempMessageLevel::TonNode_RempFullnode,
+            3 => RempMessageLevel::TonNode_RempMasterchain,
+            4 => RempMessageLevel::TonNode_RempQueue,
+            5 => RempMessageLevel::TonNode_RempShardchain,
+            v => fail!("TryFrom<u8> for RempMessageLevel: unknown value {}", v)
+        })
+    }
+}
+
+impl Into<u8> for &RempMessageLevel {
+    fn into(self) -> u8 {
+        match self {
+            RempMessageLevel::TonNode_RempCollator => 1,
+            RempMessageLevel::TonNode_RempFullnode => 2,
+            RempMessageLevel::TonNode_RempMasterchain => 3,
+            RempMessageLevel::TonNode_RempQueue => 4,
+            RempMessageLevel::TonNode_RempShardchain => 5,
         }
     }
 }

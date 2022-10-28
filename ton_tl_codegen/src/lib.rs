@@ -607,7 +607,7 @@ struct AllConstructors {
 
 fn filter_items(config: &Option<Config>, iv: &mut Vec<Matched<Item>>) {
     let built_in_types: HashSet<&'static str> = [
-        "int", "int32", "int53", "int64", "int128", "int256",
+        "int", "int32", "int53", "int64", "int128", "int256", "int512",
         "long", "double", "bytes", "vector",
         "string", "object", "function", "Object", "Function",
         "secureString", "secureBytes", "true", "false",
