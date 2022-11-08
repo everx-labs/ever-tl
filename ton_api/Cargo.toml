@@ -3,7 +3,7 @@ authors = [ 'Aaron Gallagher <_@habnab.it>', 'Connie Hilarides <connorcpu@live.c
 description = 'Minimal wrappers for TON serialization using TL-schema'
 edition = '2018'
 name = 'ton_api'
-version = '0.2.132'
+version = '0.2.139'
 
 [build-dependencies]
 failure = '0.1.7'
@@ -20,8 +20,8 @@ ordered-float = '2.8'
 secstr = '0.4'
 serde = '1.0'
 serde_derive = '1.0'
-ton_block = { git = 'ssh://git@github.com/tonlabs/ton-block.git' }
-ton_types = { git = 'ssh://git@github.com/tonlabs/ton-types.git' }
+ton_block = { git = 'https://github.com/tonlabs/ton-labs-block.git', branch = 'consensus-updates' }
+ton_types = { git = 'https://github.com/tonlabs/ton-labs-types.git', tag = '1.11.4' }
 
 [dev-dependencies]
 base64 = '0.13'

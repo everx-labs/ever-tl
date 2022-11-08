@@ -98,6 +98,12 @@ impl From<Vec<u8>> for bytes {
     }
 }
 
+impl Default for int512 {
+    fn default() -> Self {
+        int512([0; 64])
+    }
+}
+
 /// Represents 128-bit unsigned integer.
 #[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 pub struct int128(pub [u8; 16]);
@@ -107,9 +113,14 @@ pub struct int128(pub [u8; 16]);
 //pub struct int256(pub [u8; 32]);
 pub(crate) type int256 = ton_types::UInt256;
 
+/// Represents 512-bit unsigned integer.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct int512(pub [u8; 64]);
+
 impl_byteslike!(@common bytes);
 impl_byteslike!(@arraylike int128);
 //impl_byteslike!(@arraylike int256);
+impl_byteslike!(@arraylike int512);
 
 /// Represents base TL-object type.
 pub struct TLObject(Box<dyn AnyBoxedSerialize>);
@@ -489,6 +500,27 @@ macro_rules! impl_tl_primitive {
     }
 }
 
+macro_rules! impl_tl_primitive_byte {
+    ($tltype:ident, $ptype:ty, $read:ident, $write:ident) => {
+        pub type $tltype = $ptype;
+
+        impl BareDeserialize for $ptype {
+            fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
+                Ok(de.$read()?)
+            }
+        }
+
+        impl BareSerialize for $ptype {
+            fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
+            fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
+                ser.$write(*self)?;
+                Ok(())
+            }
+        }
+    }
+}
+
+impl_tl_primitive_byte! { byte, u8, read_u8, write_u8 }
 impl_tl_primitive! { int, i32, read_i32, write_i32 }
 impl_tl_primitive! { uint, u32, read_u32, write_u32 }
 impl_tl_primitive! { long, i64, read_i64, write_i64 }
@@ -511,10 +543,12 @@ impl BareSerialize for double {
 }
 
 // Built-in types:
+// pub type Int8 = i8;
 pub type Int32 = i32;
 pub type Int53 = i64;
 pub type Int64 = i64;
 
+// pub type int8 = Int8;
 pub type int32 = Int32;
 pub type int53 = Int53;
 pub type int64 = Int64;

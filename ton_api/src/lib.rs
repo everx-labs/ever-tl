@@ -14,13 +14,12 @@
 #![allow(clippy::unreadable_literal)]
 #![deny(private_in_public)]
 
-use crate::{ton_prelude::TLObject, ton::ton_node::RempMessageStatus};
+use crate::{ton_prelude::TLObject, ton::ton_node::{RempMessageStatus, RempMessageLevel}};
 use failure::Fail;
-use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}};
+use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}, convert::TryFrom};
 
 use ton_block::{BlockIdExt, ShardIdent};
-use ton_types::Result;
-use ton_types::{fail, UInt256};
+use ton_types::{fail, Result, UInt256};
 
 macro_rules! _invalid_id {
     ($id:ident) => {
@@ -54,12 +53,16 @@ pub struct InvalidConstructor {
 /// Struct for deserializing TL-scheme objects from any `io::Read`
 pub struct Deserializer<'r> {
     reader: &'r mut dyn Read,
+    pos: usize
 }
 
 impl<'r> Deserializer<'r> {
     /// Create `Deserializer` with given `io::Read` trait object
     pub fn new(reader: &'r mut dyn Read) -> Self {
-        Deserializer { reader }
+        Deserializer { 
+            reader,
+            pos: 0 
+        }
     }
 
     /// Read `ConstructorNumber` from reader
@@ -90,7 +93,12 @@ impl<'r> Deserializer<'r> {
 
 impl<'r> Read for Deserializer<'r> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.reader.read(buf)
+        self.reader.read(buf).map(
+            |read| {
+                self.pos += read;
+                read
+            }
+        )
     }
 }
 
@@ -355,6 +363,32 @@ impl fmt::Display for RempMessageStatus {
     }
 }
 
+impl TryFrom<u8> for RempMessageLevel {
+    type Error = failure::Error;
+    fn try_from(value: u8) -> Result<Self> {
+        Ok(match value {
+            1 => RempMessageLevel::TonNode_RempCollator,
+            2 => RempMessageLevel::TonNode_RempFullnode,
+            3 => RempMessageLevel::TonNode_RempMasterchain,
+            4 => RempMessageLevel::TonNode_RempQueue,
+            5 => RempMessageLevel::TonNode_RempShardchain,
+            v => fail!("TryFrom<u8> for RempMessageLevel: unknown value {}", v)
+        })
+    }
+}
+
+impl Into<u8> for &RempMessageLevel {
+    fn into(self) -> u8 {
+        match self {
+            RempMessageLevel::TonNode_RempCollator => 1,
+            RempMessageLevel::TonNode_RempFullnode => 2,
+            RempMessageLevel::TonNode_RempMasterchain => 3,
+            RempMessageLevel::TonNode_RempQueue => 4,
+            RempMessageLevel::TonNode_RempShardchain => 5,
+        }
+    }
+}
+
 // Deserialize boxed TL object from bytes
 pub fn deserialize_boxed(bytes: &[u8]) -> Result<TLObject> {
     let mut reader = bytes;
@@ -377,6 +411,28 @@ pub fn deserialize_boxed_bundle(bytes: &[u8]) -> Result<Vec<TLObject>> {
         }
     }
     Ok(ret)
+}
+
+/// Deserialize bundle of boxed TL objects with some suffix from bytes
+pub fn deserialize_boxed_bundle_with_suffix(bytes: &[u8]) -> Result<(Vec<TLObject>, usize)> {
+    let mut reader = bytes;
+    let mut de = Deserializer::new(&mut reader);
+    let mut ret = Vec::new();
+    let mut pos = 0;
+    loop {
+        match de.read_boxed::<TLObject>() {
+            Ok(object) => {
+                ret.push(object);
+                pos = de.pos;
+            },
+            Err(_) => if ret.is_empty() {
+                fail!("Deserialization error")
+            } else {
+                break
+            }
+        }
+    }
+    Ok((ret, pos))
 }
 
 /// Serialize boxed TL object into bytes

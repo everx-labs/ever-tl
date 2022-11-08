@@ -8,12 +8,14 @@ bytes data:string = Bytes;
 true = True;
 boolTrue = Bool;
 boolFalse = Bool;
+int8 = Int8;
 
 
 vector {t:Type} # [ t ] = Vector t;
 
 int128 4*[ int ] = Int128;
 int256 8*[ int ] = Int256;
+int512 16*[ int ] = Int512;
 
 testObject value:int o:object f:function = TestObject;
 testString value:string = TestObject;
@@ -368,10 +370,9 @@ tonNode.data data:bytes = tonNode.Data;
 tonNode.ihrMessage data:bytes = tonNode.IhrMessage;
 tonNode.externalMessage data:bytes = tonNode.ExternalMessage;
 tonNode.rempMessage message:bytes id:int256 timestamp:long signature:bytes = tonNode.RempMessage;
-tonNode.rmqNew = tonNode.RmqRecordStatus;
-tonNode.rmqRejected block_id:tonNode.blockIdExt error:string = tonNode.RmqRecordStatus;
-tonNode.rmqAccepted block_id:tonNode.blockIdExt = tonNode.RmqRecordStatus;
-tonNode.rmqRecord message:bytes message_id:int256 source_key_id:int256 source_idx:int status:tonNode.RmqRecordStatus = tonNode.rmqRecord;
+
+tonNode.rmqMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.RmqRecord;
+tonNode.rmqMessageDigest masterchain_seqno:int messages:(vector int256) = tonNode.RmqRecord;
 
 tonNode.rempFullnode = tonNode.RempMessageLevel;
 tonNode.rempQueue = tonNode.RempMessageLevel;
@@ -387,10 +388,24 @@ tonNode.rempIgnored level:tonNode.RempMessageLevel block_id:tonNode.blockIdExt =
 tonNode.rempDuplicate block_id:tonNode.blockIdExt = tonNode.RempMessageStatus;
 tonNode.rempTimeout = tonNode.RempMessageStatus;
 
+tonNode.rempSentToValidatorsCompact sent_to:byte total_validators:byte = tonNode.RempMessageStatusCompact;
+tonNode.rempNewCompact = tonNode.RempMessageStatusCompact;
+tonNode.rempRejectedCompact level:byte block_id_index:byte error:string = tonNode.RempMessageStatusCompact;
+tonNode.rempAcceptedCompact level:byte block_id_index:byte master_id_index:byte = tonNode.RempMessageStatusCompact;
+tonNode.rempIgnoredCompact level:byte block_id_index:byte = tonNode.RempMessageStatusCompact;
+tonNode.rempDuplicateCompact block_id_index:byte = tonNode.RempMessageStatusCompact;
+tonNode.rempTimeoutCompact = tonNode.RempMessageStatusCompact;
+
 tonNode.rempReceived = tonNode.RempReceived;
 tonNode.rempReceipt message_id:int256 status:tonNode.RempMessageStatus timestamp:long source_id:int256 = tonNode.RempReceipt;
 
-tonNode.rempSignedReceipt receipt:bytes signature:bytes = tonNode.RempSignedReceipt;
+tonNode.rempSignedReceipt receipt:bytes signature:int512 = tonNode.RempSignedReceipt;
+
+tonNode.rempSignedReceiptCompact message_id:int256 receipt:tonNode.RempMessageStatusCompact 
+        timestamp:long signature:int512 = tonNode.RempSignedReceiptCompact;
+
+tonNode.rempCombinedReceipt source_id:int256 ids:(vector tonNode.blockIdExt) 
+        receipts:(vector tonNode.RempSignedReceiptCompact) = tonNode.RempCombinedReceipt;
 
 tonNode.newShardBlock block:tonNode.blockIdExt cc_seqno:int data:bytes = tonNode.NewShardBlock;
 
