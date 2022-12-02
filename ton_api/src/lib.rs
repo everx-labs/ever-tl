@@ -32,6 +32,8 @@ pub mod ton;
 pub mod secure;
 mod ton_prelude;
 
+include!("../../common/src/info.rs");
+
 /// Struct representing TL constructor number (CRC32 calculated from constructor definition string)
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstructorNumber(pub u32);
