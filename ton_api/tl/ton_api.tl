@@ -404,8 +404,14 @@ tonNode.rempSignedReceipt receipt:bytes signature:int512 = tonNode.RempSignedRec
 tonNode.rempSignedReceiptCompact message_id:int256 receipt:tonNode.RempMessageStatusCompact 
         timestamp:long signature:int512 = tonNode.RempSignedReceiptCompact;
 
+tonNode.rempReceiptCompact message_id:int256 receipt:tonNode.RempMessageStatusCompact 
+        timestamp:long = tonNode.RempReceiptCompact;
+
+//  tonNode.rempCombinedReceipt source_id:int256 ids:(vector tonNode.blockIdExt) 
+//          receipts:(vector tonNode.RempSignedReceiptCompact) = tonNode.RempCombinedReceipt;
+
 tonNode.rempCombinedReceipt source_id:int256 ids:(vector tonNode.blockIdExt) 
-        receipts:(vector tonNode.RempSignedReceiptCompact) = tonNode.RempCombinedReceipt;
+        receipts:(vector tonNode.RempReceiptCompact) = tonNode.RempCombinedReceipt;
 
 tonNode.newShardBlock block:tonNode.blockIdExt cc_seqno:int data:bytes = tonNode.NewShardBlock;
 

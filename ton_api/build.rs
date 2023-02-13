@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
+* Copyright (C) 2019-2022 TON Labs. All Rights Reserved.
 *
 * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
 * this file except in compliance with the License.
@@ -15,6 +15,17 @@ use std::{fs, path};
 use std::io::Read;
 use std::path::Path;
 use ton_tl_codegen::Config;
+
+use std::process::Command;
+
+fn get_value(cmd: &str, args: &[&str]) -> String {
+    if let Ok(result) = Command::new(cmd).args(args).output() {
+        if let Ok(result) = String::from_utf8(result.stdout) {
+            return result
+        }
+    }
+    "Unknown".to_string()
+}
 
 const OUTPUT_DIR: &str = "src/ton";
 const TL_DIR: &str = "tl";
@@ -62,5 +73,17 @@ fn main() {
     };
 
     ton_tl_codegen::generate_code_for(config, &input, Path::new(OUTPUT_DIR));
+
+    let git_branch = get_value("git", &["rev-parse", "--abbrev-ref", "HEAD"]);
+    let git_commit = get_value("git", &["rev-parse", "HEAD"]);
+    let commit_date = get_value("git", &["log", "-1", "--date=iso", "--pretty=format:%cd"]);
+    let build_time = get_value("date", &["+%Y-%m-%d %T %z"]);
+    let rust_version = get_value("rustc", &["--version"]);
+
+    println!("cargo:rustc-env=BUILD_GIT_BRANCH={}", git_branch);
+    println!("cargo:rustc-env=BUILD_GIT_COMMIT={}", git_commit);
+    println!("cargo:rustc-env=BUILD_GIT_DATE={}", commit_date);
+    println!("cargo:rustc-env=BUILD_TIME={}", build_time);
+    println!("cargo:rustc-env=BUILD_RUST_VERSION={}", rust_version);
 }
 
