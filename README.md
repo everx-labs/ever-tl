@@ -43,4 +43,3 @@ See the [LICENSE](LICENSE) file for details.
 ## Tags
 
 `blockchain` `everscale` `rust` `venom-blockchain` `venom-developer-program`
-
