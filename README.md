@@ -12,7 +12,7 @@ Serialization/deserialization of TL-based data types
 
 ## About
 
-Implementation of Reliable Large Datagram Protocol (RLDP) in safe Rust. RLDP is a protocol that runs on top of ADNL UDP, which is used to transfer large data blocks and includes Forward Error Correction (FEC) algorithms as a replacement of acknowledgment packets on the other side. This makes it possible to transfer data between network components more efficiently, but with more traffic consumption.
+Serialization/deserialization of data types used in Everscale/Venom nodes and descibed using TL language.
 
 ## Getting Started
 
@@ -23,8 +23,8 @@ Rust complier v1.65+.
 ### Installing
 
 ```
-git clone --recurse-submodules https://github.com/tonlabs/ever-rldp.git
-cd ever-rldp
+git clone --recurse-submodules https://github.com/tonlabs/ever-tl.git
+cd ever-tl
 cargo build --release
 ```
 
@@ -39,3 +39,8 @@ Contribution to the project is expected to be done via pull requests submission.
 ## License
 
 See the [LICENSE](LICENSE) file for details.
+
+## Tags
+
+`blockchain` `everscale` `rust` `venom-blockchain` `venom-developer-program`
+
