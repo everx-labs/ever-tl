@@ -366,6 +366,10 @@ tonNode.data data:bytes = tonNode.Data;
 //tonNode.preparedKeyBlockProofEmpty = tonNode.PreparedKeyBlockProof;
 //tonNode.preparedKeyBlockProof block_id:tonNode.blockIdExt = tonNode.PreparedKeyBlockProof;
 
+tonNode.rempSessionInfo workchain:int shard:long vertical_seqno:int last_key_block_seqno:int 
+        catchain_seqno:int config_hash:int256
+        members:(vector validator.groupMember) = tonNode.RempSessionInfo;
+
 tonNode.ihrMessage data:bytes = tonNode.IhrMessage;
 tonNode.externalMessage data:bytes = tonNode.ExternalMessage;
 tonNode.rempMessage message:bytes id:int256 timestamp:long signature:bytes = tonNode.RempMessage;
