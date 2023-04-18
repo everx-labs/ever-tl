@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
+* Copyright (C) 2019-2023 EverX. All Rights Reserved.
 *
 * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
 * this file except in compliance with the License.
@@ -15,11 +15,10 @@
 #![deny(private_in_public)]
 
 use crate::{ton_prelude::TLObject, ton::ton_node::{RempMessageStatus, RempMessageLevel}};
-use failure::Fail;
-use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}, convert::TryFrom};
+use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}, convert::TryFrom, sync::Arc};
 
 use ton_block::{BlockIdExt, ShardIdent};
-use ton_types::{fail, Result, UInt256};
+use ton_types::{fail, KeyOption, Result, UInt256, Ed25519KeyOption};
 
 macro_rules! _invalid_id {
     ($id:ident) => {
@@ -45,7 +44,7 @@ impl fmt::Debug for ConstructorNumber {
 }
 
 /// Struct for handling mismatched constructor number
-#[derive(Debug, Fail)]
+#[derive(Debug, failure::Fail)]
 #[fail(display = "expected a constructor in {:?}; got {:?}", expected, received)]
 pub struct InvalidConstructor {
     pub expected: Vec<ConstructorNumber>,
@@ -345,10 +344,18 @@ impl fmt::Display for RempMessageStatus {
                 if a.master_id.seq_no() == 0 {
                     write!(f, "Accepted by {:?}, block {}", a.level, a.block_id)
                 } else {
-                    write!(f, "Accepted by {:?}, block {}, masterblock {}", a.level, a.block_id, a.master_id)
+                    write!(
+                        f, 
+                        "Accepted by {:?}, block {}, masterblock {}", 
+                        a.level, a.block_id, a.master_id
+                    )
                 }
             RempMessageStatus::TonNode_RempRejected(r) =>
-                write!(f, "Rejected by {:?}, block {}, reason `{}`", r.level, r.block_id, r.error),
+                write!(
+                    f, 
+                    "Rejected by {:?}, block {}, reason `{}`", 
+                    r.level, r.block_id, r.error
+                ),
             RempMessageStatus::TonNode_RempIgnored(i) => {
                 if i.block_id.seq_no() == 0 {
                     write!(f, "Ignored by {:?}", i.level)
@@ -360,13 +367,17 @@ impl fmt::Display for RempMessageStatus {
             RempMessageStatus::TonNode_RempDuplicate(d) =>
                 write!(f, "Duplicate, see block {}", d.block_id),
             RempMessageStatus::TonNode_RempSentToValidators(s) =>
-                write!(f, "Sent to validators, sent to {}, total validators {}", s.sent_to, s.total_validators)
+                write!(
+                    f, 
+                    "Sent to validators, sent to {}, total validators {}", 
+                    s.sent_to, s.total_validators
+                )
         }
     }
 }
 
 impl TryFrom<u8> for RempMessageLevel {
-    type Error = failure::Error;
+    type Error = ton_types::Error;
     fn try_from(value: u8) -> Result<Self> {
         Ok(match value {
             1 => RempMessageLevel::TonNode_RempCollator,
@@ -379,9 +390,9 @@ impl TryFrom<u8> for RempMessageLevel {
     }
 }
 
-impl Into<u8> for &RempMessageLevel {
-    fn into(self) -> u8 {
-        match self {
+impl From<&RempMessageLevel> for u8 {
+    fn from(val: &RempMessageLevel) -> Self {
+        match val {
             RempMessageLevel::TonNode_RempCollator => 1,
             RempMessageLevel::TonNode_RempFullnode => 2,
             RempMessageLevel::TonNode_RempMasterchain => 3,
@@ -391,33 +402,46 @@ impl Into<u8> for &RempMessageLevel {
     }
 }
 
-// Deserialize boxed TL object from bytes
-pub fn deserialize_boxed(bytes: &[u8]) -> Result<TLObject> {
-    let mut reader = bytes;
-    Deserializer::new(&mut reader).read_boxed::<TLObject>()
+fn downcast_with_error<D: AnyBoxedSerialize>(object: TLObject) -> Result<D> {
+    match object.downcast() {
+        Ok(result) => Ok(result),
+        Err(object) => fail!(
+            "Want to get {}, but we have TLObject {:?}", 
+            std::any::type_name::<D>(), 
+            object
+        )
+    }
+}
+
+/// Deserialize boxed TL object from bytes
+pub fn deserialize_boxed(bytes: impl AsRef<[u8]>) -> Result<TLObject> {
+    let mut reader = bytes.as_ref();
+    let mut de = Deserializer::new(&mut reader);
+    de.read_boxed()
 }
 
 /// Deserialize bundle of boxed TL objects from bytes
-pub fn deserialize_boxed_bundle(bytes: &[u8]) -> Result<Vec<TLObject>> {
-    let mut reader = bytes;
-    let mut de = Deserializer::new(&mut reader);
+pub fn deserialize_boxed_bundle(bytes: impl AsRef<[u8]>) -> Result<Vec<TLObject>> {
+    let mut bytes = bytes.as_ref();
+    let mut de = Deserializer::new(&mut bytes);
     let mut ret = Vec::new();
     loop {
         match de.read_boxed::<TLObject>() {
             Ok(object) => ret.push(object),
-            Err(_) => if ret.is_empty() {
-                fail!("Deserialization error")
+            Err(err) => if ret.is_empty() {
+                fail!("Deserialization error {}", err)
             } else {
-                break
+                return Ok(ret)
             }
         }
     }
-    Ok(ret)
 }
 
-/// Deserialize bundle of boxed TL objects with some suffix from bytes
-pub fn deserialize_boxed_bundle_with_suffix(bytes: &[u8]) -> Result<(Vec<TLObject>, usize)> {
-    let mut reader = bytes;
+/// Deserialize bundle of boxed TL objects from bytes and return suffix position
+pub fn deserialize_boxed_bundle_with_suffix(
+    bytes: impl AsRef<[u8]>
+) -> Result<(Vec<TLObject>, usize)> {
+    let mut reader = bytes.as_ref();
     let mut de = Deserializer::new(&mut reader);
     let mut ret = Vec::new();
     let mut pos = 0;
@@ -427,14 +451,43 @@ pub fn deserialize_boxed_bundle_with_suffix(bytes: &[u8]) -> Result<(Vec<TLObjec
                 ret.push(object);
                 pos = de.pos;
             },
-            Err(_) => if ret.is_empty() {
-                fail!("Deserialization error")
+            Err(err) => if ret.is_empty() {
+                fail!("Deserialization error {}", err)
             } else {
-                break
+                return Ok((ret, pos))
             }
         }
     }
-    Ok((ret, pos))
+}
+
+/// Deserialize boxed TL object from bytes then downcast to given type
+pub fn deserialize_typed<D: AnyBoxedSerialize>(bytes: impl AsRef<[u8]>) -> Result<D> {
+    let object = deserialize_boxed(bytes)?;
+    downcast_with_error(object)
+}
+
+/// Deserialize boxed TL object from bytes then downcast to given type and return suffix position
+pub fn deserialize_typed_with_suffix<D: AnyBoxedSerialize>(
+    bytes: impl AsRef<[u8]>
+) -> Result<(D, usize)> {
+    let mut bytes = bytes.as_ref();
+    let mut de = Deserializer::new(&mut bytes);
+    let object = de.read_boxed::<TLObject>()?;
+    let result = downcast_with_error(object)?;
+    Ok((result, de.pos))
+}
+
+/// Serialize non-boxed TL object into bytes
+pub fn serialize_bare<T: BareSerialize>(object: &T) -> Result<Vec<u8>> {
+    let mut buf = Vec::new();
+    Serializer::new(&mut buf).write_into_boxed(object)?;
+    Ok(buf)
+}
+
+/// Serialize non-boxed TL object into bytes in-place
+pub fn serialize_bare_inplace<T: BareSerialize>(buf: &mut Vec<u8>, object: &T) -> Result<()> {
+    buf.truncate(0);
+    Serializer::new(buf).write_into_boxed(object)
 }
 
 /// Serialize boxed TL object into bytes
@@ -454,19 +507,6 @@ pub fn serialize_boxed_append<T: BoxedSerialize>(buf: &mut Vec<u8>, object: &T) 
 pub fn serialize_boxed_inplace<T: BoxedSerialize>(buf: &mut Vec<u8>, object: &T) -> Result<()> {
     buf.truncate(0); 
     serialize_boxed_append(buf, object)
-}
-
-/// Serialize non-boxed TL object into bytes
-pub fn serialize_bare<T: BareSerialize>(object: &T) -> Result<Vec<u8>> {
-    let mut buf = Vec::new();
-    Serializer::new(&mut buf).write_into_boxed(object)?;
-    Ok(buf)
-}
-
-/// Serialize non-boxed TL object into bytes in-place
-pub fn serialize_bare_inplace<T: BareSerialize>(buf: &mut Vec<u8>, object: &T) -> Result<()> {
-    buf.truncate(0);
-    Serializer::new(buf).write_into_boxed(object)
 }
 
 /// Get TL tag from non-boxed object
@@ -499,5 +539,26 @@ pub fn tag_from_data(data: &[u8]) -> u32 {
         0
     } else {
         u32::from_le_bytes([data[0], data[1], data[2], data[3]])
+    }
+}
+
+impl TryFrom<Arc<dyn KeyOption>> for ton::PublicKey {
+    type Error = ton_types::Error;
+    fn try_from(value: Arc<dyn KeyOption>) -> Result<Self> {
+        let key = UInt256::with_array(value.pub_key()?.try_into()?);
+        let key = ton::pub_::publickey::Ed25519 { key }.into_boxed();
+        Ok(key)
+    }
+}
+
+impl TryFrom<&ton::PublicKey> for Arc<dyn KeyOption> {
+    type Error = ton_types::Error;
+    fn try_from(value: &ton::PublicKey) -> Result<Self> {
+        match value {
+            ton::PublicKey::Pub_Ed25519(key) => {
+                Ok(Ed25519KeyOption::from_public_key(key.key.as_slice()))
+            }
+            value => fail!("Unsupported public key type {:?}", value)
+        }
     }
 }

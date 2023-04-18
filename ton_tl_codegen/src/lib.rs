@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
+* Copyright (C) 2019-2023 EverX. All Rights Reserved.
 *
 * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
 * this file except in compliance with the License.
@@ -74,46 +74,46 @@ pub mod parser {
         }
 
         pub fn get_name(&self) -> String {
-            use self::Type::*;
-            match *self {
-                Int => "#".to_owned(),
-                Flags => "flags".to_owned(),
-                Named(ref v) => Self::get_dotted_name(&v),
-                TypeParameter(ref ty) => ty.clone(),
-                Generic(ref v, ref ty) => Self::get_generic_name(&v, &ty),
-                Flagged(ref name, ref bit, ref ty) => Self::get_flagged_name(&name, *bit, &ty),
-                Repeated(repeat_count, ref fields) => Self::get_repeated_name(repeat_count, &fields),
+            match self {
+                Type::Int => "#".to_owned(),
+                Type::Flags => "flags".to_owned(),
+                Type::Named(v) => Self::get_dotted_name(v),
+                Type::TypeParameter(ty) => ty.clone(),
+                Type::Generic(v, ty) => Self::get_generic_name(v, ty),
+                Type::Flagged(name, bit, ty) => Self::get_flagged_name(name, *bit, ty),
+                Type::Repeated(repeat_count, fields) => Self::get_repeated_name(*repeat_count, fields),
             }
         }
 
-        pub fn names_vec(&self) -> Option<&Vec<String>> {
-            use self::Type::*;
-            match *self {
-                Int |
-                Flags |
-                TypeParameter(..) |
-                Flagged(..) |
-                Repeated(..) => None,
-                Named(ref v) |
-                Generic(ref v, ..) => Some(v),
+        pub fn names_vec(&self) -> Option<&[String]> {
+            match self {
+                Type::Int |
+                Type::Flags |
+                Type::TypeParameter(..) |
+                Type::Flagged(..) |
+                Type::Repeated(..) => None,
+                Type::Named(v) |
+                Type::Generic(v, ..) => Some(v),
             }
         }
 
         pub fn names_vec_mut(&mut self) -> Option<&mut Vec<String>> {
-            use self::Type::*;
             match *self {
-                Int |
-                Flags |
-                TypeParameter(..) |
-                Flagged(..) |
-                Repeated(..) => None,
-                Named(ref mut v) |
-                Generic(ref mut v, ..) => Some(v),
+                Type::Int |
+                Type::Flags |
+                Type::TypeParameter(..) |
+                Type::Flagged(..) |
+                Type::Repeated(..) => None,
+                Type::Named(ref mut v) |
+                Type::Generic(ref mut v, ..) => Some(v),
             }
         }
 
         pub fn owned_names_vec(&self) -> Vec<String> {
-            self.names_vec().cloned().unwrap_or_else(Vec::new)
+            match self.names_vec() {
+                Some(vec) => vec.to_vec(),
+                None => Vec::new()
+            }
         }
 
         pub fn namespaces(&self) -> &[String] {
@@ -127,19 +127,14 @@ pub mod parser {
         }
 
         pub fn flag_field(&self) -> Option<(String, u32)> {
-            use self::Type::*;
             match self {
-                &Flagged(ref f, b, _) => Some((f.clone(), b)),
+                Type::Flagged(f, b, _) => Some((f.clone(), *b)),
                 _ => None,
             }
         }
 
         pub fn is_type_parameter(&self) -> bool {
-            use self::Type::*;
-            match self {
-                &TypeParameter(..) => true,
-                _ => false,
-            }
+            matches!(self, Type::TypeParameter(..))
         }
     }
 
@@ -247,7 +242,7 @@ pub mod parser {
 
     fn ty() -> Parser<u8, Type> {
         sym(b'#').map(|_| Type::Int) |
-            sym(b'!') * ident().map(Type::TypeParameter) |
+            (sym(b'!') * ident().map(Type::TypeParameter)) |
             ty_flag() |
             ty_generic() |
             dotted_ident().map(Type::Named)
@@ -291,7 +286,7 @@ pub mod parser {
 
     fn fields() -> Parser<u8, (Vec<Field>, Vec<Field>)> {
         (simple_space().opt() * sym(b'?')).map(|_| (vec![], vec![])) |
-            (simple_space() * ty_param_field()).repeat(0..) + base_fields()
+            ((simple_space() * ty_param_field()).repeat(0..) + base_fields())
     }
 
     fn output_and_matched<T: 'static>(inner: Parser<u8, T>) -> Parser<u8, Matched<T>> {
@@ -412,11 +407,9 @@ pub mod parser {
             let index = self.0.iter()
                 .zip(&other.0)
                 .enumerate()
-                .skip_while(|&(_, (a, b))| a == b)
-                .next()
-                .map(|(e, _)| e)
-                .unwrap_or(self.0.len().min(other.0.len()));
-            NameChunks((&self.0[..index]).to_vec())
+                .find(|&(_, (a, b))| a != b)
+                .map_or_else(|| self.0.len().min(other.0.len()), |(e, _)| e);
+            NameChunks(self.0[..index].to_vec())
         }
 
         pub fn trim_common_prefix(&mut self, other: &Self) {
@@ -497,6 +490,7 @@ fn reformat(filename: &Path) {
         return
         }
     };
+    #[allow(clippy::collapsible_if)]
     if !status.success() {
         if !WARNING_PRINTED.swap(true, Ordering::Relaxed) {
             println!("cargo:warning=rustfmt command returned code: {}. {}", status.code().unwrap(), INSTALL_INSTRUCTIONS);
@@ -509,11 +503,10 @@ struct Namespace(BTreeMap<syn::Ident, NamespaceItem>);
 
 impl Namespace {
     fn descend_tree(&mut self, names: &[syn::Ident]) -> &mut Self {
-        use self::NamespaceItem::*;
         names.iter()
             .fold(self, |ns, name| {
-                match ns.0.entry(name.clone()).or_insert_with(|| AnotherNamespace(Default::default())) {
-                    &mut AnotherNamespace(ref mut ns) => ns,
+                match ns.0.entry(name.clone()).or_insert_with(|| NamespaceItem::AnotherNamespace(Default::default())) {
+                    &mut NamespaceItem::AnotherNamespace(ref mut ns) => ns,
                     other => panic!("descend_tree: duplicate namespace item {} {:?} {:?}", name, other, names),
                 }
             })
@@ -534,11 +527,12 @@ impl Namespace {
         let items = self.0.iter()
             .map(|(name, item)| {
                 match item {
-                    NamespaceItem::AsEnum(ref cs) => cs.as_enum(config),
-                    NamespaceItem::AsVariant(ref cm) => cm.0.as_variant_type_struct(config, &cm.1),
-                    NamespaceItem::AsFunction(ref cm) => cm.0.as_function_struct(config, &cm.1),
-                    NamespaceItem::AnotherNamespace(ref ns) => {
+                    NamespaceItem::AsEnum(cs) => cs.as_enum(config),
+                    NamespaceItem::AsVariant(cm) => cm.0.as_variant_type_struct(config, &cm.1),
+                    NamespaceItem::AsFunction(cm) => cm.0.as_function_struct(config, &cm.1),
+                    NamespaceItem::AnotherNamespace(ns) => {
                         let prelude = quote! {
+                            // #![allow(clippy::large_enum_variant)]
                             use serde_derive::{Serialize, Deserialize};
                         };
                         let (filename, _dir) = ns.print_rust(config, prelude, path.join(name.to_string()).as_path(), false);
@@ -572,16 +566,15 @@ impl Namespace {
     }
 
     fn populate_all_constructors<'this>(&'this self, to_populate: &mut Vec<&'this Constructor<TypeIR, FieldIR>>) {
-        use self::NamespaceItem::*;
         for item in self.0.values() {
-            match *item {
-                AsEnum(ref cs) => {
+            match item {
+                NamespaceItem::AsEnum(cs) => {
                     to_populate.extend(cs.0.iter().map(|cm| &cm.0));
                 }
-                AsFunction(ref c) => {
+                NamespaceItem::AsFunction(c) => {
                     to_populate.push(&c.0);
                 }
-                AnotherNamespace(ref ns) => {
+                NamespaceItem::AnotherNamespace(ns) => {
                     ns.populate_all_constructors(to_populate);
                 }
                 _ => {}
@@ -613,9 +606,9 @@ fn filter_items(config: &Option<Config>, iv: &mut Vec<Matched<Item>>) {
         "secureString", "secureBytes", "true", "false",
     ].iter().cloned().collect();
 
-    iv.retain(|&Matched(ref i, _)| {
+    iv.retain(|Matched(ref i, _)| {
         let c = match i {
-            &Item::Constructor(ref c) => c,
+            Item::Constructor(c) => c,
             _ => return true,
         };
         // Blacklist some annoying inconsistencies.
@@ -631,8 +624,6 @@ fn filter_items(config: &Option<Config>, iv: &mut Vec<Matched<Item>>) {
 
 impl AllConstructors {
     fn from_matched_items(config: &Option<Config>, iv: Vec<Matched<Item>>) -> Self {
-        use self::NamespaceItem::*;
-
         let mut current = Delimiter::Types;
         let mut ret = AllConstructors {
             items: Default::default(),
@@ -664,7 +655,7 @@ impl AllConstructors {
             }
         }
         let mut resolve_map: TypeResolutionMap = Default::default();
-        for (_, cs) in &mut constructors_tree {
+        for cs in constructors_tree.values_mut() {
             let base_ns = cs.first_constructor().output.namespaces().to_vec();
             cs.fix_names(config, &base_ns, &mut resolve_map);
         }
@@ -676,16 +667,16 @@ impl AllConstructors {
         }
         for (_, cs) in constructors_tree {
             let cs = cs.resolve(config, &resolve_map);
-            for &Matched(ref c, ref m) in &cs.0 {
+            for Matched(c, m) in &cs.0 {
                 ret.items.insert(
                     c.variant.owned_names_vec(),
-                    AsVariant(Matched(c.clone(), m.clone())));
+                    NamespaceItem::AsVariant(Matched(c.clone(), m.clone())));
             }
-            ret.items.insert(cs.first_constructor().output.owned_names_vec(), AsEnum(cs));
+            ret.items.insert(cs.first_constructor().output.owned_names_vec(), NamespaceItem::AsEnum(cs));
         }
         for Matched(c, m) in functions {
             let c = c.resolve(config, Delimiter::Functions, &resolve_map);
-            ret.items.insert(c.variant.owned_names_vec(), AsFunction(Matched(c, m)));
+            ret.items.insert(c.variant.owned_names_vec(), NamespaceItem::AsFunction(Matched(c, m)));
         }
         ret
     }
@@ -807,7 +798,7 @@ impl TypeName {
 fn to_snake_case(ident: &str) -> String {
     let mut result = String::new();
     for c in ident.chars() {
-        if c.is_ascii_uppercase() && result.len() > 0 {
+        if c.is_ascii_uppercase() && !result.is_empty() {
             result.push_str(format!("_{}", c.to_ascii_lowercase()).as_str());
         } else {
             result.push(c.to_ascii_lowercase());
@@ -826,7 +817,7 @@ impl<S> ::std::iter::FromIterator<S> for TypeName
         let mut idents = vec![];
         let mut iter = iter.into_iter();
         if let Some(mut last_segment) = iter.next() {
-            while let Some(segment) = iter.next() {
+            for segment in iter {
                 let ident = no_conflict_ident(to_snake_case(last_segment.as_ref()).as_str());
                 idents.push(ident);
                 last_segment = segment;
@@ -861,13 +852,12 @@ fn is_first_char_lowercase(s: &str) -> bool {
 
 impl WireKind {
     fn from_names_and_hint(names: &[String], force_bare: bool) -> Self {
-        use self::WireKind::*;
         match names.last().map(String::as_str) {
-            Some("true") => FlaggedTrue,
+            Some("true") => WireKind::FlaggedTrue,
             Some(s) if force_bare || is_first_char_lowercase(s) =>
-                Bare(names.iter().map(String::as_str).collect()),
-            Some(_) =>
-                Boxed(names.iter().map(String::as_str).collect()),
+                WireKind::Bare(names.iter().map(String::as_str).collect()),
+            Some(_) => 
+                WireKind::Boxed(names.iter().map(String::as_str).collect()),
             None => unimplemented!(),
         }
     }
@@ -877,23 +867,23 @@ impl WireKind {
     }
 
     fn become_container_for(&mut self, include_determiner: bool, contained: Self) {
-        use self::WireKind::*;
-        let ty_loc = match *self {
-            Bare(ref mut t) |
-            Boxed(ref mut t) => t,
+        let ty_loc = match self {
+            WireKind::Bare(ref mut t) |
+            WireKind::Boxed(ref mut t) => t,
             _ => unimplemented!(),
         };
         let contained = if include_determiner {
             match contained {
-                Bare(ty) => ty.transformed_tokens(|t| quote!(crate::ton::Bare, #t)),
-                Boxed(ty) => ty.transformed_tokens(|t| quote!(crate::ton::Boxed, #t)),
-                TypeParameter(t) => quote!(crate::ton::Boxed, #t),
+                WireKind::Bare(ty) => ty.transformed_tokens(|t| quote!(crate::ton::Bare, #t)),
+                WireKind::Boxed(ty) => ty.transformed_tokens(|t| quote!(crate::ton::Boxed, #t)),
+                WireKind::TypeParameter(t) => quote!(crate::ton::Boxed, #t),
                 _ => unimplemented!(),
             }
         } else {
             match contained {
-                Bare(t) | Boxed(t) => t.tokens,
-                TypeParameter(t) => quote!(#t),
+                WireKind::Bare(t) |
+                WireKind::Boxed(t) => t.tokens,
+                WireKind::TypeParameter(t) => quote!(#t),
                 _ => unimplemented!(),
             }
         };
@@ -901,63 +891,48 @@ impl WireKind {
     }
 
     fn as_read_method(&self) -> Tokens {
-        use self::WireKind::*;
         match *self {
-            Bare(..) | Flags => quote!(read_bare),
-            Boxed(..) | TypeParameter(..) => quote!(read_boxed),
-            ExtraDefault(..) => quote!(just_default),
-            FlaggedTrue => fail_hard(),
+            WireKind::Bare(..) |
+            WireKind::Flags => quote!(read_bare),
+            WireKind::Boxed(..) |
+            WireKind::TypeParameter(..) => quote!(read_boxed),
+            WireKind::ExtraDefault(..) => quote!(just_default),
+            WireKind::FlaggedTrue => fail_hard(),
         }
     }
 
     fn as_write_method(&self) -> Option<Tokens> {
-        use self::WireKind::*;
         match *self {
-            Bare(..) | Flags => Some(quote!(write_bare)),
-            Boxed(..) | TypeParameter(..) => Some(quote!(write_boxed)),
-            ExtraDefault(..) => None,
-            FlaggedTrue => Some(fail_hard()),
+            WireKind::Bare(..) |
+            WireKind::Flags => Some(quote!(write_bare)),
+            WireKind::Boxed(..) |
+            WireKind::TypeParameter(..) => Some(quote!(write_boxed)),
+            WireKind::ExtraDefault(..) => None,
+            WireKind::FlaggedTrue => Some(fail_hard()),
         }
     }
 
     fn is_unit(&self) -> bool {
-        use self::WireKind::*;
-        match *self {
-            FlaggedTrue => true,
-            _ => false,
-        }
+        matches!(self, WireKind::FlaggedTrue)
     }
 
     fn is_flags(&self) -> bool {
-        use self::WireKind::*;
-        match *self {
-            Flags => true,
-            _ => false,
-        }
+        matches!(self, WireKind::Flags)
     }
 
     fn is_type_parameter(&self) -> bool {
-        use self::WireKind::*;
-        match *self {
-            TypeParameter(..) => true,
-            _ => false,
-        }
+        matches!(self, WireKind::TypeParameter(..))
     }
 
     fn is_extra(&self) -> bool {
-        use self::WireKind::*;
-        match *self {
-            ExtraDefault(..) => true,
-            _ => false,
-        }
+        matches!(self, WireKind::ExtraDefault(..))
     }
 
     fn opt_names_slice(&self) -> Option<&[syn::Ident]> {
-        use self::WireKind::*;
-        match *self {
-            Bare(ref t) |
-            Boxed(ref t) |
-            ExtraDefault(ref t) => t.idents.as_ref().map(|v| v.as_slice()),
+        match self {
+            WireKind::Bare(t) |
+            WireKind::Boxed(t) |
+            WireKind::ExtraDefault(t) => t.idents.as_deref(),
             _ => None,
         }
     }
@@ -1062,10 +1037,9 @@ impl TypeIR {
     }
 
     fn io_turbofish(&self, with_tlobject: bool) -> Tokens {
-        use self::WireKind::*;
         let ty = match self.wire_kind {
-            Flags => quote!(crate::ton::Flags),
-            TypeParameter(_) if with_tlobject => quote!(crate::ton::TLObject),
+            WireKind::Flags => quote!(crate::ton::Flags),
+            WireKind::TypeParameter(_) if with_tlobject => quote!(crate::ton::TLObject),
             _ => self.non_field_type(),
         };
         quote!(::<#ty>)
@@ -1085,12 +1059,11 @@ impl TypeIR {
     }
 
     fn non_field_type(&self) -> Tokens {
-        use self::WireKind::*;
         match self.wire_kind {
-            Bare(ref t) |
-            Boxed(ref t) |
-            ExtraDefault(ref t) => t.tokens.clone(),
-            TypeParameter(ref t) => quote!(#t),
+            WireKind::Bare(ref t) |
+            WireKind::Boxed(ref t) |
+            WireKind::ExtraDefault(ref t) => t.tokens.clone(),
+            WireKind::TypeParameter(ref t) => quote!(#t),
             _ => fail_hard(),
         }
     }
@@ -1151,10 +1124,9 @@ impl TypeIR {
     }
 
     fn is_defined_trailer(&self) -> Tokens {
-        use self::WireKind::*;
         match self.wire_kind {
             _ if self.with_option => quote!(.is_some()),
-            FlaggedTrue => quote!(),
+            WireKind::FlaggedTrue => quote!(),
             _ => fail_hard(),
         }
     }
@@ -1176,11 +1148,7 @@ impl TypeIR {
     }
 
     fn owned_names_vec(&self) -> Vec<syn::Ident> {
-        self.wire_kind.opt_names_slice()
-            .unwrap()
-            .iter()
-            .cloned()
-            .collect()
+        self.wire_kind.opt_names_slice().unwrap().to_vec()
     }
 
     fn name(&self) -> syn::Ident {
@@ -1254,16 +1222,15 @@ impl FieldIR {
 
 impl Type {
     fn resolved(&self, config: &Option<Config>, resolve_map: &TypeResolutionMap, is_flag_field: bool) -> TypeIR {
-        use Type::*;
         match *self {
-            Named(ref names) => {
+            Type::Named(ref names) => {
                 match resolve_map.get(names) {
-                    Some(ir) => return ir.clone(),
+                    Some(ir) => ir.clone(),
                     None => TypeIR::from_names(config, names),
                 }
             },
-            TypeParameter(ref name) => TypeIR::type_parameter(no_conflict_ident(name)),
-            Generic(ref container, ref ty) => {
+            Type::TypeParameter(ref name) => TypeIR::type_parameter(no_conflict_ident(name)),
+            Type::Generic(ref container, ref ty) => {
                 let ty = ty.resolved(config, resolve_map, false);
                 let container = match resolve_map.get(container) {
                     Some(ir) => ir.clone(),
@@ -1271,13 +1238,13 @@ impl Type {
                 };
                 ty.with_container(container)
             },
-            Flagged(_, _, ref ty) => {
+            Type::Flagged(_, _, ref ty) => {
                 ty.resolved(config, resolve_map, false).with_option_wrapper()
             },
-            Flags => TypeIR::flags(),
-            Int if is_flag_field => TypeIR::flags(),
-            Int => TypeIR::int(),
-            Repeated(..) => TypeIR::repeated(),
+            Type::Flags => TypeIR::flags(),
+            Type::Int if is_flag_field => TypeIR::flags(),
+            Type::Int => TypeIR::int(),
+            Type::Repeated(..) => TypeIR::repeated(),
         }
     }
 }
@@ -1308,11 +1275,11 @@ impl Constructor<Type, Field> {
 
     fn is_output_a_type_parameter(&self) -> bool {
         let output_name = match &self.output {
-            &Type::Named(ref v) if v.len() == 1 => v[0].as_str(),
+            Type::Named(v) if v.len() == 1 => v[0].as_str(),
             _ => return false,
         };
         for p in &self.type_parameters {
-            if p.name.as_ref().map(String::as_str) == Some(output_name) {
+            if p.name.as_deref() == Some(output_name) {
                 return true;
             }
         }
@@ -1436,7 +1403,7 @@ impl Constructor<TypeIR, FieldIR> {
             if f.ty.needs_box {
                 read_op = quote!(Box::new(#read_op));
             }
-            let expr = if let Some((ref flag_name, ref flag_bit)) = f.flag_bit {
+            let expr = if let Some((flag_name, flag_bit)) = &f.flag_bit {
                 let flag_ident = no_conflict_ident(flag_name);
                 let predicate = quote!(#flag_ident & (1 << #flag_bit) != 0);
                 if f.ty.is_unit() {
@@ -1489,8 +1456,7 @@ impl Constructor<TypeIR, FieldIR> {
 
     fn as_type_struct_base(&self, config: &Option<Config>, name: syn::Ident, matched: &str) -> Tokens {
         let serialize_destructure = self.as_variant_ref_destructure(&name)
-            .map(|d| quote! { let &#d = self; })
-            .unwrap_or_else(|| quote!());
+            .map_or_else(|| quote!(), |d| quote! { let #d = self; });
         let serialize_stmts = self.as_variant_serialize();
         let deserialize = self.as_struct_deserialize();
         let type_impl = self.as_type_impl(
@@ -1552,11 +1518,11 @@ impl Constructor<TypeIR, FieldIR> {
                 if f.ty.is_extra() {
                     return quote! { #field_name: _ }
                 }
-                let prefix = f.ty.ref_prefix();
                 if let Some(local_name) = f.local_name() {
+                    let prefix = f.ty.ref_prefix();
                     quote! { #field_name: #prefix #local_name }
                 } else {
-                    quote! { #prefix #field_name }
+                    quote! { #field_name }
                 }
             });
         Some(quote! {
@@ -1566,7 +1532,7 @@ impl Constructor<TypeIR, FieldIR> {
 
     fn as_variant_serialize(&self) -> Tokens {
         let determine_flags = self.as_struct_determine_flags(quote!())
-            .unwrap_or_else(|| quote!());
+            .unwrap_or_default();
         let fields = self.fields.iter()
             .map(|f| {
                 if f.ty.is_unit() {
@@ -1581,21 +1547,16 @@ impl Constructor<TypeIR, FieldIR> {
                 if f.ty.is_flags() {
                     quote! { _ser. #write_method (&_flags)?; }
                 } else if f.flag_bit.is_some() {
-                    let outer_ref = f.ty.reference_prefix();
-                    let inner_ref = f.ty.ref_prefix();
-                    let local_ref = f.ty.local_reference_prefix();
                     quote! {
-                        if let #outer_ref Some(#inner_ref inner) = #local_name {
-                            _ser. #write_method (#local_ref inner)?;
+                        if let Some(inner) = #local_name {
+                            _ser. #write_method (inner)?;
                         }
                     }
+                } else if f.ty.needs_box {
+                    quote!(_ser.#write_method(#local_name.as_ref())?;)
                 } else {
-                    if f.ty.needs_box {
-                        quote!(_ser.#write_method(#local_name.as_ref())?;)
-                    } else {
-                        let prefix = f.ty.local_reference_prefix();
-                        quote!(_ser. #write_method(#prefix #local_name)?;)
-                    }
+                    let prefix = f.ty.local_reference_prefix();
+                    quote!(_ser. #write_method(#prefix #local_name)?;)
                 }
             });
         quote! {
@@ -1661,12 +1622,10 @@ impl Constructor<TypeIR, FieldIR> {
         let tl_id = self.tl_id().unwrap();
         if self.fields.is_empty() {
             quote!(=> (#tl_id, &()))
+        } else if self.variant.needs_box {
+            quote!((x) => (#tl_id, x.as_ref()))
         } else {
-            if self.variant.needs_box {
-                quote!((ref x) => (#tl_id, x.as_ref()))
-            } else {
-                quote!((ref x) => (#tl_id, x))
-            }
+            quote!((x) => (#tl_id, x))
         }
     }
 
@@ -1756,7 +1715,7 @@ fn camelize<F>(config: &Option<Config>, resolve_map: &mut TypeResolutionMap, ty:
     let mut new_name = NameChunks::from_name(&name).unwrap();
     let force_bare = additional_correction(&mut new_name, names);
     names.push(new_name.as_upper_camel_case());
-    let type_ir = TypeIR::from_names_and_hint(config, &names, force_bare);
+    let type_ir = TypeIR::from_names_and_hint(config, names, force_bare);
     resolve_map.insert(fixup_key, type_ir.clone());
     resolve_map.insert(names.clone(), type_ir);
     new_name
@@ -1823,10 +1782,12 @@ impl Constructors<Type, Field> {
 
 }
 
+type MethodsTree<'a> = BTreeMap<&'a str, BTreeMap<&'a TypeIR, BTreeSet<&'a Constructor<TypeIR, FieldIR>>>>;
+
 impl Constructors<TypeIR, FieldIR> {
-    fn coalesce_methods(&self) -> BTreeMap<&str, BTreeMap<&TypeIR, BTreeSet<&Constructor<TypeIR, FieldIR>>>> {
-        let mut map: BTreeMap<&str, BTreeMap<&TypeIR, BTreeSet<&Constructor<TypeIR, FieldIR>>>> = BTreeMap::new();
-        for &Matched(ref cons, _) in &self.0 {
+    fn coalesce_methods(&self) -> MethodsTree {
+        let mut map: MethodsTree = BTreeMap::new();
+        for Matched(cons, _) in &self.0 {
             for field in &cons.fields {
                 if field.ty.is_flags() {
                     continue
@@ -1842,7 +1803,7 @@ impl Constructors<TypeIR, FieldIR> {
     }
 
     fn as_only_unwrap(&self, enum_name: &syn::Ident) -> Option<Tokens> {
-        let &Matched(ref cons, _) = self.0.first()?;
+        let Matched(cons, _) = self.0.first()?;
         if self.0.len() != 1 || cons.fields.is_empty() {
             return None
         }
@@ -1880,7 +1841,7 @@ impl Constructors<TypeIR, FieldIR> {
             let constructors = constructors.into_iter()
                 .map(|c| {
                     let cons_name = c.full_variant_name();
-                    quote!(&#enum_name::#cons_name(ref x) => #value)
+                    quote!(#enum_name::#cons_name(ref x) => #value)
                 });
             let trailer = if exhaustive {
                 quote!()
@@ -1940,7 +1901,7 @@ impl Constructors<TypeIR, FieldIR> {
         let empty = tl_ids.iter().find(|&&(_, c)| c.fields.is_empty());
         let nonempty = tl_ids.iter().find(|&&(_, c)| !c.fields.is_empty());
         let (empty_id, nonempty_id, nonempty_cons) = match (empty, nonempty) {
-            (Some(&(ref i_e, _)), Some(&(ref i_n, c_n))) => (i_e, i_n, c_n),
+            (Some((i_e, _)), Some((i_n, c_n))) => (i_e, i_n, c_n),
             _ => return quote!(),
         };
         let nonempty_variant = nonempty_cons.variant.unboxed();
@@ -1979,10 +1940,10 @@ impl Constructors<TypeIR, FieldIR> {
 
     fn as_serialize_match(&self, enum_name: &syn::Ident) -> Tokens {
         let constructors = self.0.iter()
-            .map(|&Matched(ref c, _)| {
+            .map(|Matched(c, _)| {
                 let variant_name = c.full_variant_name();
                 let serialize = c.as_variant_serialize_arm();
-                quote!(&#enum_name::#variant_name #serialize)
+                quote!(#enum_name::#variant_name #serialize)
             });
         quote! {
             match self {
@@ -2025,9 +1986,14 @@ impl Constructors<TypeIR, FieldIR> {
         ret
     }
 
+    fn enum_default_first(&self) -> Option<bool> {
+        let Matched(cons, _) = self.0.first()?;
+        Some(cons.fields.is_empty())
+    }
+
     fn enum_default_impl(&self) -> Option<Tokens> {
 
-        let &Matched(ref cons, _) = self.0.first()?;
+        let Matched(cons, _) = self.0.first()?;
         let name = self.first_constructor().output.name();
         let variant = cons.full_variant_name();
 
@@ -2040,15 +2006,13 @@ impl Constructors<TypeIR, FieldIR> {
                 }
             })
         }
-        let name = self.first_constructor().output.name();
-        let variant = cons.full_variant_name();
-        
         let ty = cons.variant.unboxed();
 
-        let mut default = quote!(#ty::default());
-        if cons.variant.needs_box {
-            default = quote!(Box::new(#default));
-        }
+        let default = if cons.variant.needs_box {
+            quote!(Box::default())
+        } else {
+            quote!(#ty::default())
+        };
 
         Some(quote! {
             impl Default for #name {
@@ -2070,7 +2034,21 @@ impl Constructors<TypeIR, FieldIR> {
                 pub(crate) type BlockIdExt = ton_block::BlockIdExt;
             }
         }
-        let derives = gen_derives(config, quote! { Debug, Clone, PartialEq }, name.to_string());
+        let mut derives = quote! { Debug, Clone, PartialEq };
+        let (default_impl, default_token);
+        match self.enum_default_first() {
+            Some(false) => {
+                default_impl = self.enum_default_impl();
+                default_token = None;
+            }
+            _ => {
+                derives.append(Punct::new(',', Spacing::Alone));
+                derives.append(Ident::new("Default", Span::call_site()));
+                default_impl = None;
+                default_token = Some(quote!{ #[default] });
+            }
+        }
+        let derives = gen_derives(config, derives, name.to_string());
         let variants = self.0.iter()
             .map(|cm| cm.0.as_variant());
         let methods = self.determine_methods(&name);
@@ -2079,12 +2057,12 @@ impl Constructors<TypeIR, FieldIR> {
             self.as_serialize_match(&name),
             self.as_deserialize_match(&name));
         let option_type_impl = self.as_option_type_impl();
-        let default_impl = self.enum_default_impl();
 
         quote! {
             #[derive(#derives)]
             #[doc = #doc]
             pub enum #name {
+                #default_token
                 #( #variants , )*
             }
             #methods
@@ -2106,6 +2084,7 @@ pub fn generate_code_for(config: Option<Config>, input: &str, path: &Path) {
     let layer = constructors.layer as i32;
     let prelude = quote! {
         #![allow(bare_trait_objects, unused_variables, unused_imports, non_snake_case)]
+        #![allow(clippy::module_inception)]
         pub use crate::ton_prelude::*;
 
         pub const LAYER: i32 = #layer;
