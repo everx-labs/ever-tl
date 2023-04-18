@@ -4,6 +4,5 @@
   "need_determiner": [],
   "replace_with_bytes": [],
   "additional_derives": {
-    "BlockIdExt": ["Serialize", "Deserialize"]
   }
 }

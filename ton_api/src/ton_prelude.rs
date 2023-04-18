@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
+* Copyright (C) 2019-2023 EverX. All Rights Reserved.
 *
 * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
 * this file except in compliance with the License.
@@ -95,6 +95,18 @@ impl BareSerialize for bytes {
 impl From<Vec<u8>> for bytes {
     fn from(v: Vec<u8>) -> Self {
         bytes(v)
+    }
+}
+
+impl From<bytes> for Vec<u8> {
+    fn from(v: bytes) -> Self {
+        v.0
+    }
+}
+
+impl AsRef<[u8]> for bytes {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_ref()
     }
 }
 
@@ -248,9 +260,9 @@ impl From<bool> for Bool {
     }
 }
 
-impl Into<bool> for Bool {
-    fn into(self) -> bool {
-        match self {
+impl From<Bool> for bool {
+    fn from(val: Bool) -> Self {
+        match val {
             Bool::BoolTrue => true,
             Bool::BoolFalse => false,
         }
@@ -310,28 +322,12 @@ impl<T> BoxedSerialize for Box<T>
 }
 
 /// Base enumeration for any bare type. Used as vectors type parameter.
-#[derive(PartialEq, Hash)]
-pub enum Bare {
-    None
-}
-
-impl Default for Bare {
-    fn default() -> Self {
-        Bare::None
-    }
-}
+#[derive(Default, PartialEq, Hash)]
+pub struct Bare;
 
 /// Base enumeration for any boxed type. Used as vectors type parameter.
-#[derive(PartialEq, Hash)]
-pub enum Boxed {
-    None
-}
-
-impl Default for Boxed {
-    fn default() -> Self {
-        Boxed::None
-    }
-}
+#[derive(Default, PartialEq, Hash)]
+pub struct Boxed;
 
 #[derive(PartialEq, Hash, Default)]
 pub struct Vector<Det, T>(pub Vec<T>, PhantomData<fn() -> Det>);
@@ -363,6 +359,12 @@ macro_rules! impl_vector {
         impl<T> From<Vec<T>> for Vector<$det, T> {
             fn from(obj: Vec<T>) -> Self {
                 Vector(obj, PhantomData)
+            }
+        }
+
+        impl<T> From<Vector<$det, T>> for Vec<T> {
+            fn from(obj: Vector<$det, T>) -> Self {
+                obj.0
             }
         }
 
