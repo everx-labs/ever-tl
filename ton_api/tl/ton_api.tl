@@ -421,6 +421,9 @@ tonNode.newShardBlock block:tonNode.blockIdExt cc_seqno:int data:bytes = tonNode
 tonNode.blockBroadcast id:tonNode.blockIdExt catchain_seqno:int validator_set_hash:int 
               signatures:(vector tonNode.blockSignature) 
               proof:bytes data:bytes = tonNode.Broadcast;
+tonNode.queueUpdateBroadcast id:tonNode.blockIdExt catchain_seqno:int validator_set_hash:int 
+              signatures:(vector tonNode.blockSignature) target_wc:int
+              data:bytes = tonNode.Broadcast;
 tonNode.ihrMessageBroadcast message:tonNode.ihrMessage = tonNode.Broadcast;
 tonNode.externalMessageBroadcast message:tonNode.externalMessage = tonNode.Broadcast;
 tonNode.newShardBlockBroadcast block:tonNode.newShardBlock = tonNode.Broadcast;
@@ -455,16 +458,20 @@ tonNode.prepareKeyBlockProof block:tonNode.blockIdExt allow_partial:Bool = tonNo
 tonNode.prepareBlockProofs blocks:(vector tonNode.blockIdExt) allow_partial:Bool = tonNode.PreparedProof;
 tonNode.prepareKeyBlockProofs blocks:(vector tonNode.blockIdExt) allow_partial:Bool = tonNode.PreparedProof;
 tonNode.prepareBlock block:tonNode.blockIdExt = tonNode.Prepared;
+tonNode.prepareQueueUpdate block:tonNode.blockIdExt target_wc:int = tonNode.Prepared;
 tonNode.prepareBlocks blocks:(vector tonNode.blockIdExt) = tonNode.Prepared;
 tonNode.preparePersistentState block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt = tonNode.PreparedState;
+tonNode.preparePersistentMsgQueue block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt target_wc:int = tonNode.PreparedState;
 tonNode.prepareZeroState block:tonNode.blockIdExt = tonNode.PreparedState;
 tonNode.getNextKeyBlockIds block:tonNode.blockIdExt max_size:int = tonNode.KeyBlocks;
 tonNode.downloadNextBlockFull prev_block:tonNode.blockIdExt = tonNode.DataFull;
 tonNode.downloadBlockFull block:tonNode.blockIdExt = tonNode.DataFull;
+tonNode.downloadQueueUpdate block:tonNode.blockIdExt target_wc:int = tonNode.Data;
 tonNode.downloadBlock block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadBlocks blocks:(vector tonNode.blockIdExt) = tonNode.DataList;
 tonNode.downloadPersistentState block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadPersistentStateSlice block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt offset:long max_size:long = tonNode.Data;
+tonNode.downloadPersistentMsgQueueSlice block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt target_wc:int offset:long max_size:long = tonNode.Data;
 tonNode.downloadZeroState block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadBlockProof block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadKeyBlockProof block:tonNode.blockIdExt = tonNode.Data;
