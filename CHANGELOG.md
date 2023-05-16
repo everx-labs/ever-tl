@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.2.198
+
+- Updated datatypes to allow unique message id tracing in REMP
+
 ## Version 0.2.195
 
 - Added datatypes for msg queue updates
