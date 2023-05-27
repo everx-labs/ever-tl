@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.0
+
+- Use bytes types as alias to Vec<u8>
+
 ## Version 0.2.198
 
 - Updated datatypes to allow unique message id tracing in REMP

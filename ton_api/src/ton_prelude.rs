@@ -75,9 +75,24 @@ macro_rules! impl_byteslike {
 }
 
 /// Represents bytes vector.
+#[cfg(feature="bytes_as_vec")]
+pub type bytes = Vec<u8>;
+
+#[cfg(feature="bytes_as_vec")]
+impl BareSerialize for bytes {
+    fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
+    fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
+        ser.write_bare::<[u8]>(self)
+    }
+}
+
+/// Represents bytes vector.
+/// TBD: in future
+#[cfg(not(feature="bytes_as_vec"))]
 #[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 pub struct bytes(pub Vec<u8>);
 
+#[cfg(not(feature="bytes_as_vec"))]
 impl BareDeserialize for bytes {
     fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
         let vec = de.read_bare::<Vec<u8>>()?;
@@ -85,6 +100,7 @@ impl BareDeserialize for bytes {
     }
 }
 
+#[cfg(not(feature="bytes_as_vec"))]
 impl BareSerialize for bytes {
     fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
     fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
@@ -92,24 +108,28 @@ impl BareSerialize for bytes {
     }
 }
 
+#[cfg(not(feature="bytes_as_vec"))]
 impl From<Vec<u8>> for bytes {
     fn from(v: Vec<u8>) -> Self {
         bytes(v)
     }
 }
 
+#[cfg(not(feature="bytes_as_vec"))]
 impl From<bytes> for Vec<u8> {
     fn from(v: bytes) -> Self {
         v.0
     }
 }
 
+#[cfg(not(feature="bytes_as_vec"))]
 impl AsRef<[u8]> for bytes {
     fn as_ref(&self) -> &[u8] {
         self.0.as_ref()
     }
 }
 
+#[cfg(not(feature="bytes_as_vec"))]
 impl Default for int512 {
     fn default() -> Self {
         int512([0; 64])
@@ -129,6 +149,7 @@ pub(crate) type int256 = ton_types::UInt256;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct int512(pub [u8; 64]);
 
+#[cfg(not(feature="bytes_as_vec"))]
 impl_byteslike!(@common bytes);
 impl_byteslike!(@arraylike int128);
 //impl_byteslike!(@arraylike int256);
