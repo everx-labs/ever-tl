@@ -3,7 +3,7 @@ authors = [ 'Aaron Gallagher <_@habnab.it>', 'Connie Hilarides <connorcpu@live.c
 description = 'Code generator for TL-schema'
 edition = '2021'
 name = 'ton_tl_codegen'
-version = '0.0.2'
+version = '0.1.0'
 
 [dependencies]
 crc = '1.8'

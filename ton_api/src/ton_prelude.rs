@@ -57,7 +57,7 @@ macro_rules! impl_byteslike {
 
         impl BareDeserialize for $ty {
             fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
-                let mut ret: Self = Default::default();
+                let mut ret = Self::default();
                 de.read_exact(&mut ret.0)?;
                 Ok(ret)
             }
@@ -129,13 +129,6 @@ impl AsRef<[u8]> for bytes {
     }
 }
 
-#[cfg(not(feature="bytes_as_vec"))]
-impl Default for int512 {
-    fn default() -> Self {
-        int512([0; 64])
-    }
-}
-
 /// Represents 128-bit unsigned integer.
 #[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 pub struct int128(pub [u8; 16]);
@@ -148,6 +141,12 @@ pub(crate) type int256 = ton_types::UInt256;
 /// Represents 512-bit unsigned integer.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct int512(pub [u8; 64]);
+
+impl Default for int512 {
+    fn default() -> Self {
+        int512([0; 64])
+    }
+}
 
 #[cfg(not(feature="bytes_as_vec"))]
 impl_byteslike!(@common bytes);
