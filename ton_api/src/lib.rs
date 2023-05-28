@@ -562,3 +562,25 @@ impl TryFrom<&ton::PublicKey> for Arc<dyn KeyOption> {
         }
     }
 }
+
+pub trait Signing where Self: BareSerialize + Sized {
+    fn signature_mut(&mut self) -> &mut crate::ton::bytes;
+    fn sign(mut self, key: &Arc<dyn KeyOption>) -> Result<Self> {
+        let signature = std::mem::take(self.signature_mut());
+        debug_assert!(signature.is_empty());
+
+        let mut buf = Vec::new();
+        Serializer::new(&mut buf).write_into_boxed(&self)?;
+        *self.signature_mut() = key.sign(&buf)?.into();
+        Ok(self)
+    }
+    fn verify(&mut self, key: &Arc<dyn KeyOption>) -> Result<()> {
+        let signature = std::mem::take(self.signature_mut());
+        debug_assert!(!signature.is_empty());
+
+        let mut buf = Vec::new();
+        Serializer::new(&mut buf).write_into_boxed(self)?;
+        *self.signature_mut() = signature; // restore object's signature
+        key.verify(&buf, self.signature_mut())
+    }
+}

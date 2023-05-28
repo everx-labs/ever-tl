@@ -29,7 +29,6 @@ use quote::{quote, TokenStreamExt};
 use serde_derive::Deserialize;
 use proc_macro2::{Spacing, Punct};
 
-
 pub mod parser {
     use std::cmp::Ordering;
 
@@ -1222,15 +1221,15 @@ impl FieldIR {
 
 impl Type {
     fn resolved(&self, config: &Option<Config>, resolve_map: &TypeResolutionMap, is_flag_field: bool) -> TypeIR {
-        match *self {
-            Type::Named(ref names) => {
+        match self {
+            Type::Named(names) => {
                 match resolve_map.get(names) {
                     Some(ir) => ir.clone(),
                     None => TypeIR::from_names(config, names),
                 }
             },
-            Type::TypeParameter(ref name) => TypeIR::type_parameter(no_conflict_ident(name)),
-            Type::Generic(ref container, ref ty) => {
+            Type::TypeParameter(name) => TypeIR::type_parameter(no_conflict_ident(name)),
+            Type::Generic(container, ty) => {
                 let ty = ty.resolved(config, resolve_map, false);
                 let container = match resolve_map.get(container) {
                     Some(ir) => ir.clone(),
@@ -1238,7 +1237,7 @@ impl Type {
                 };
                 ty.with_container(container)
             },
-            Type::Flagged(_, _, ref ty) => {
+            Type::Flagged(_, _, ty) => {
                 ty.resolved(config, resolve_map, false).with_option_wrapper()
             },
             Type::Flags => TypeIR::flags(),
@@ -1382,12 +1381,14 @@ impl Constructor<TypeIR, FieldIR> {
         let derives = gen_derives(config, quote! { Debug, Default, Clone, PartialEq }, name.to_string());
         let impl_generics = self.impl_generics();
         let fields = self.fields_tokens(quote! {pub}, quote! {;});
+        let signing_trait_impl = self.as_signing_trait_impl();
  
         quote! {
             #[derive(#derives)]
             #[doc = #doc]
             pub struct #name #impl_generics #fields
             impl Eq for #name {}
+            #signing_trait_impl
         }
     }
 
@@ -1471,6 +1472,25 @@ impl Constructor<TypeIR, FieldIR> {
             #type_impl
             #into_boxed
         }
+    }
+
+    fn as_signing_trait_impl(&self) -> Tokens {
+        for f in &self.fields {
+            if f.name() == "signature" {
+                if f.ty.field_type().to_string() == "crate :: ton :: bytes" {
+                    assert!(!self.is_function);
+                    let name = self.variant_name();
+                    return quote!(
+                        impl crate::Signing for #name {
+                            fn signature_mut(&mut self) -> &mut crate::ton::bytes { &mut self.signature }
+                        }
+                    );
+                } else {
+                    break;
+                }
+            }
+        }
+        quote!()
     }
 
     fn variant_name(&self) -> syn::Ident {
