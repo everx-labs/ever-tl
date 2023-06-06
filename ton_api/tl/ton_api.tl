@@ -717,6 +717,7 @@ engine.validator.delProxy out_ip:int out_port:int categories:(vector int) priori
 engine.validator.sign key_hash:int256 data:bytes = engine.validator.Signature;
 
 engine.validator.getStats = engine.validator.Stats;
+engine.validator.getSelectedStats filter:string = engine.validator.Stats;
 engine.validator.getSessionStats = engine.validator.SessionStats;
 engine.validator.getConfig = engine.validator.JsonConfig;
 

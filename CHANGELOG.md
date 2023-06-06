@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.7
+
+- Add GetSelectedStats control query
+
 ## Version 0.3.1
 
 - Added Signing trait for structures which have signature field
