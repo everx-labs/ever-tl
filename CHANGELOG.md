@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.22
+
+- Modify conversion API for TL public key
+- Increase package version
+
 ## Version 0.3.7
 
 - Add GetSelectedStats control query
