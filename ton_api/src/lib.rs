@@ -542,11 +542,13 @@ pub fn tag_from_data(data: &[u8]) -> u32 {
     }
 }
 
-impl TryFrom<Arc<dyn KeyOption>> for ton::PublicKey {
+impl TryFrom<&Arc<dyn KeyOption>> for ton::PublicKey {
     type Error = ton_types::Error;
-    fn try_from(value: Arc<dyn KeyOption>) -> Result<Self> {
+    fn try_from(value: &Arc<dyn KeyOption>) -> Result<Self> {
         let key = UInt256::with_array(value.pub_key()?.try_into()?);
-        let key = ton::pub_::publickey::Ed25519 { key }.into_boxed();
+        let key = ton::pub_::publickey::Ed25519 { 
+            key 
+        }.into_boxed();
         Ok(key)
     }
 }
