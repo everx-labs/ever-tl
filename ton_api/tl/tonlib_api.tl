@@ -50,10 +50,13 @@ ton.blockId workchain:int32 shard:int64 seqno:int32 = internal.BlockId;
 
 raw.shardAccountState shard_account:bytes = raw.ShardAccountState;
 raw.shardAccountNone = raw.ShardAccountState;
+raw.shardAccountMeta shard_account_meta:bytes = raw.ShardAccountMeta;
+raw.shardAccountMetaNone = raw.ShardAccountMeta;
 raw.fullAccountState balance:int64 code:bytes data:bytes last_transaction_id:internal.transactionId block_id:tonNode.blockIdExt frozen_hash:bytes sync_utime:int53 = raw.FullAccountState;
 raw.message source:accountAddress destination:accountAddress value:int64 fwd_fee:int64 ihr_fee:int64 created_lt:int64 body_hash:bytes msg_data:msg.Data = raw.Message;
 raw.transaction utime:int53 data:bytes transaction_id:internal.transactionId fee:int64 storage_fee:int64 other_fee:int64 in_msg:raw.message out_msgs:vector<raw.message> = raw.Transaction;
 raw.transactions transactions:vector<raw.transaction> previous_transaction_id:internal.transactionId = raw.Transactions;
+raw.appliedShardsInfo shards:vector<tonNode.blockIdExt> = raw.appliedShardsInfo;
 
 pchan.config alice_public_key:string alice_address:accountAddress bob_public_key:string bob_address:accountAddress init_timeout:int32 close_timeout:int32 channel_id:int64 = pchan.Config;
 
@@ -240,11 +243,15 @@ getBip39Hints prefix:string = Bip39Hints;
 
 //raw.init initial_account_state:raw.initialAccountState = Ok;
 raw.getShardAccountState account_address:accountAddress = raw.ShardAccountState;
+raw.getShardAccountMeta account_address:accountAddress = raw.ShardAccountMeta;
 raw.getAccount account_address:accountAddress workchain:int32 = Data;
 raw.getTransactions private_key:InputKey account_address:accountAddress from_transaction_id:internal.transactionId = raw.Transactions;
 raw.sendMessage body:bytes  = Ok;
 raw.createAndSendMessage destination:accountAddress initial_account_state:bytes data:bytes = Ok;
 raw.createQuery destination:accountAddress init_code:bytes init_data:bytes body:bytes = query.Info;
+raw.getAccountByBlock block_root_hash:int256 account_id:int256 = raw.ShardAccountState;
+raw.getAccountMetaByBlock block_root_hash:int256 account_id:int256 = raw.ShardAccountMeta;
+raw.getAppliedShardsInfo = raw.AppliedShardsInfo;
 
 sync = tonNode.BlockIdExt;
 

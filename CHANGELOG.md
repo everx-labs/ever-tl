@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.29
+
+- Added control queries TL declaration `raw.getShardAccountMeta`, `raw.getAccountByBlock`,
+`raw.getAccountMetaByBlock`, `raw.getAppliedShardsInfo`
+
 ## Version 0.3.22
 
 - Modify conversion API for TL public key
