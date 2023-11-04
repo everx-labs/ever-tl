@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.42
+
+- Added control queries TL declaration `smc.runTvm`, `smc.runTvmByBlock`, `smc.runTvmMsg` and 
+`smc.runTvmMsgByBlock`
+
 ## Version 0.3.29
 
 - Added control queries TL declaration `raw.getShardAccountMeta`, `raw.getAccountByBlock`,
