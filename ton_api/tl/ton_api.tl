@@ -49,6 +49,7 @@ pub.unenc data:bytes = PublicKey;
 pub.ed25519 key:int256 = PublicKey;
 pub.aes key:int256 = PublicKey;
 pub.overlay name:bytes = PublicKey;
+pub.bls bls_key:bytes = PublicKey;
 
 
 ---functions---
@@ -432,6 +433,7 @@ tonNode.ihrMessageBroadcast message:tonNode.ihrMessage = tonNode.Broadcast;
 tonNode.externalMessageBroadcast message:tonNode.externalMessage = tonNode.Broadcast;
 tonNode.newShardBlockBroadcast block:tonNode.newShardBlock = tonNode.Broadcast;
 tonNode.connectivityCheckBroadcast pub_key:int256 padding:bytes = tonNode.Broadcast;
+tonNode.blockCandidateBroadcast id:tonNode.blockIdExt data:bytes collated_data:bytes collated_data_file_hash:int256 created_by:int256 created_timestamp:long = tonNode.Broadcast;
 
 tonNode.shardPublicOverlayId workchain:int shard:long zero_state_file_hash:int256 = tonNode.ShardPublicOverlayId;
 
@@ -451,6 +453,8 @@ tonNode.success = tonNode.Success;
 
 tonNode.archiveNotFound = tonNode.ArchiveInfo;
 tonNode.archiveInfo id:long = tonNode.ArchiveInfo;
+
+tonNode.blockCandidateStatus candidate_id:int256 deliveries_signature:bytes approvals_signature:bytes rejections_signature:bytes merges_cnt:int created_timestamp:long = tonNode.BlockCandidateStatus;
 
 ---functions---
 
@@ -692,11 +696,13 @@ engine.validator.importPrivateKey key:PrivateKey = engine.validator.KeyHash;
 engine.validator.exportPrivateKey key_hash:int256 = PrivateKey;
 engine.validator.exportPublicKey key_hash:int256 = PublicKey;
 engine.validator.generateKeyPair = engine.validator.KeyHash;
+engine.validator.generateBlsKeyPair = engine.validator.KeyHash;
 engine.validator.addAdnlId key_hash:int256 category:int = engine.validator.Success;
 engine.validator.addDhtId key_hash:int256 = engine.validator.Success;
 engine.validator.addValidatorPermanentKey key_hash:int256 election_date:int ttl:int = engine.validator.Success;
 engine.validator.addValidatorTempKey permanent_key_hash:int256 key_hash:int256 ttl:int = engine.validator.Success;
 engine.validator.addValidatorAdnlAddress permanent_key_hash:int256 key_hash:int256 ttl:int = engine.validator.Success;
+engine.validator.addValidatorBlsKey permanent_key_hash:int256 key_hash:int256 ttl:int = engine.validator.Success;
 engine.validator.changeFullNodeAdnlAddress adnl_id:int256 = engine.validator.Success; 
 engine.validator.addLiteserver key_hash:int256 port:int = engine.validator.Success;
 engine.validator.addControlInterface key_hash:int256 port:int = engine.validator.Success;
