@@ -491,6 +491,10 @@ tonNode.downloadBlockProofLinks blocks:(vector tonNode.blockIdExt) = tonNode.Dat
 tonNode.downloadKeyBlockProofLinks blocks:(vector tonNode.blockIdExt) = tonNode.DataList;
 tonNode.getArchiveInfo masterchain_seqno:int = tonNode.ArchiveInfo;
 tonNode.getArchiveSlice archive_id:long offset:long max_size:int = tonNode.Data;
+tonNode.downloadLatestMeshKit target_nw:int = tonNode.DataFull;
+tonNode.downloadMeshKit target_nw:int block:tonNode.blockIdExt = tonNode.DataFull;
+tonNode.downloadMeshUpdate target_nw:int block:tonNode.blockIdExt = tonNode.DataFull;
+tonNode.downloadNextMeshUpdate target_nw:int prev_block:tonNode.blockIdExt = tonNode.DataFull;
 
 tonNode.getCapabilities = tonNode.Capabilities;
 
