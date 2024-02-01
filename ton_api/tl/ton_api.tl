@@ -379,8 +379,12 @@ tonNode.rempCatchainMessageIds id:int256 uid:int256 = tonNode.rempCatchainMessag
 tonNode.rempCatchainMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rempCatchainRecord;
 tonNode.rempCatchainMessageDigest masterchain_seqno:int messages:(vector tonNode.rempCatchainMessageIds) = tonNode.rempCatchainRecord;
 
+// Legacy, to be removed in later version
 tonNode.rmqMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rmqRecord;
 tonNode.rmqMessageDigest masterchain_seqno:int messages:(vector int256) = tonNode.rmqRecord;
+
+tonNode.rempCatchainMessageHeaderV2 message_id:int256 message_uid:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rempCatchainRecordV2;
+tonNode.rempCatchainMessageDigestV2 masterchain_seqno:int messages:(vector tonNode.rempCatchainMessageIds) = tonNode.rempCatchainRecordV2;
 
 tonNode.rempFullnode = tonNode.RempMessageLevel;
 tonNode.rempQueue = tonNode.RempMessageLevel;

@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.59
+
+- Added remp v2 catchain messages
+
 ## Version 0.3.47
 
 - Added BLS data structures 
