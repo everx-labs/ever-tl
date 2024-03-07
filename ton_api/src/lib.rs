@@ -12,7 +12,6 @@
 */
 
 #![allow(clippy::unreadable_literal)]
-#![deny(private_in_public)]
 
 use crate::{ton_prelude::TLObject, ton::ton_node::{RempMessageStatus, RempMessageLevel}};
 use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}, convert::TryFrom, sync::Arc};
