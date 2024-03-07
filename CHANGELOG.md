@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.62
+
+- Get rid of ton::bytes
+
 ## Version 0.3.59
 
 - Added remp v2 catchain messages
