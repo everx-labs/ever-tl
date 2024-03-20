@@ -375,12 +375,12 @@ tonNode.ihrMessage data:bytes = tonNode.IhrMessage;
 tonNode.externalMessage data:bytes = tonNode.ExternalMessage;
 tonNode.rempMessage message:bytes id:int256 timestamp:long signature:bytes = tonNode.RempMessage;
 
-//tonNode.rempCatchainMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rempCatchainRecord;
-//tonNode.rempCatchainMessageDigest masterchain_seqno:int messages:(vector tonNode.rempCatchainMessageIds) = tonNode.rempCatchainRecord;
-
-// Legacy, to be removed in later version
-//tonNode.rmqMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rmqRecord;
-//tonNode.rmqMessageDigest masterchain_seqno:int messages:(vector int256) = tonNode.rmqRecord;
+// **** Legacy, to be removed in later version ****
+tonNode.rempCatchainMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rempCatchainRecord;
+tonNode.rempCatchainMessageDigest masterchain_seqno:int messages:(vector tonNode.rempCatchainMessageIds) = tonNode.rempCatchainRecord;
+tonNode.rmqMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rmqRecord;
+tonNode.rmqMessageDigest masterchain_seqno:int messages:(vector int256) = tonNode.rmqRecord;
+// ****
 
 tonNode.rempCatchainMessageIds id:int256 uid:int256 = tonNode.rempCatchainMessageIds;
 tonNode.rempCatchainMessageHeaderV2 message_id:int256 message_uid:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rempCatchainRecordV2;
