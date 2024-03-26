@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.70
+
+- Added new structs for REMP
+
 ## Version 0.3.62
 
 - Get rid of ton::bytes
