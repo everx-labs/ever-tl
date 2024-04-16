@@ -23,7 +23,7 @@ use extfmt::Hexlify;
 use ordered_float::OrderedFloat;
 use serde_derive::{Deserialize, Serialize};
 use std::{any::type_name, fmt, hash::{Hash, Hasher}, io::{Read, Write}, marker::PhantomData};
-use ton_types::error;
+use ever_block::error;
 
 const MAX_BYTES_DEBUG_LEN: usize = 4;
 
@@ -89,7 +89,7 @@ impl BareSerialize for bytes {
 pub struct int128(pub [u8; 16]);
 
 /// Represents 256-bit unsigned integer.
-pub(crate) type int256 = ton_types::UInt256;
+pub(crate) type int256 = ever_block::UInt256;
 
 /// Represents 512-bit unsigned integer.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
