@@ -1,5 +1,5 @@
 [package]
-authors = [ 'Aaron Gallagher <_@habnab.it>', 'Connie Hilarides <connorcpu@live.com>', 'Denis K. <denis.k@tonlabs.io>', 'Alexey Vavilin <alexey.v@tonlabs.io' ]
+authors = [ 'Aaron Gallagher <_@habnab.it>', 'Connie Hilarides <connorcpu@live.com>', 'Denis K. <denis.k@everx-labs.io>', 'Alexey Vavilin <alexey.v@tonlabs.io' ]
 description = 'Code generator for TL-schema'
 edition = '2021'
 name = 'ton_tl_codegen'
