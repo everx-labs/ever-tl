@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2019-2021 TON Labs. All Rights Reserved.
+* Copyright (C) 2019-2023 EverX. All Rights Reserved.
 *
 * Licensed under the SOFTWARE EVALUATION License (the "License"); you may not use
 * this file except in compliance with the License.
@@ -23,7 +23,7 @@ use extfmt::Hexlify;
 use ordered_float::OrderedFloat;
 use serde_derive::{Deserialize, Serialize};
 use std::{any::type_name, fmt, hash::{Hash, Hasher}, io::{Read, Write}, marker::PhantomData};
-use ton_types::error;
+use ever_block::error;
 
 const MAX_BYTES_DEBUG_LEN: usize = 4;
 
@@ -57,7 +57,7 @@ macro_rules! impl_byteslike {
 
         impl BareDeserialize for $ty {
             fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
-                let mut ret: Self = Default::default();
+                let mut ret = Self::default();
                 de.read_exact(&mut ret.0)?;
                 Ok(ret)
             }
@@ -75,32 +75,12 @@ macro_rules! impl_byteslike {
 }
 
 /// Represents bytes vector.
-#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
-pub struct bytes(pub Vec<u8>);
-
-impl BareDeserialize for bytes {
-    fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
-        let vec = de.read_bare::<Vec<u8>>()?;
-        Ok(bytes(vec))
-    }
-}
+pub type bytes = Vec<u8>;
 
 impl BareSerialize for bytes {
     fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
     fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
-        ser.write_bare::<[u8]>(&self.0)
-    }
-}
-
-impl From<Vec<u8>> for bytes {
-    fn from(v: Vec<u8>) -> Self {
-        bytes(v)
-    }
-}
-
-impl Default for int512 {
-    fn default() -> Self {
-        int512([0; 64])
+        ser.write_bare::<[u8]>(self)
     }
 }
 
@@ -109,17 +89,19 @@ impl Default for int512 {
 pub struct int128(pub [u8; 16]);
 
 /// Represents 256-bit unsigned integer.
-//#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
-//pub struct int256(pub [u8; 32]);
-pub(crate) type int256 = ton_types::UInt256;
+pub(crate) type int256 = ever_block::UInt256;
 
 /// Represents 512-bit unsigned integer.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct int512(pub [u8; 64]);
 
-impl_byteslike!(@common bytes);
+impl Default for int512 {
+    fn default() -> Self {
+        int512([0; 64])
+    }
+}
+
 impl_byteslike!(@arraylike int128);
-//impl_byteslike!(@arraylike int256);
 impl_byteslike!(@arraylike int512);
 
 /// Represents base TL-object type.
@@ -248,9 +230,9 @@ impl From<bool> for Bool {
     }
 }
 
-impl Into<bool> for Bool {
-    fn into(self) -> bool {
-        match self {
+impl From<Bool> for bool {
+    fn from(val: Bool) -> Self {
+        match val {
             Bool::BoolTrue => true,
             Bool::BoolFalse => false,
         }
@@ -310,28 +292,12 @@ impl<T> BoxedSerialize for Box<T>
 }
 
 /// Base enumeration for any bare type. Used as vectors type parameter.
-#[derive(PartialEq, Hash)]
-pub enum Bare {
-    None
-}
-
-impl Default for Bare {
-    fn default() -> Self {
-        Bare::None
-    }
-}
+#[derive(Default, PartialEq, Hash)]
+pub struct Bare;
 
 /// Base enumeration for any boxed type. Used as vectors type parameter.
-#[derive(PartialEq, Hash)]
-pub enum Boxed {
-    None
-}
-
-impl Default for Boxed {
-    fn default() -> Self {
-        Boxed::None
-    }
-}
+#[derive(Default, PartialEq, Hash)]
+pub struct Boxed;
 
 #[derive(PartialEq, Hash, Default)]
 pub struct Vector<Det, T>(pub Vec<T>, PhantomData<fn() -> Det>);
@@ -363,6 +329,12 @@ macro_rules! impl_vector {
         impl<T> From<Vec<T>> for Vector<$det, T> {
             fn from(obj: Vec<T>) -> Self {
                 Vector(obj, PhantomData)
+            }
+        }
+
+        impl<T> From<Vector<$det, T>> for Vec<T> {
+            fn from(obj: Vector<$det, T>) -> Self {
+                obj.0
             }
         }
 

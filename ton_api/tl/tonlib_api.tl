@@ -50,10 +50,13 @@ ton.blockId workchain:int32 shard:int64 seqno:int32 = internal.BlockId;
 
 raw.shardAccountState shard_account:bytes = raw.ShardAccountState;
 raw.shardAccountNone = raw.ShardAccountState;
+raw.shardAccountMeta shard_account_meta:bytes = raw.ShardAccountMeta;
+raw.shardAccountMetaNone = raw.ShardAccountMeta;
 raw.fullAccountState balance:int64 code:bytes data:bytes last_transaction_id:internal.transactionId block_id:tonNode.blockIdExt frozen_hash:bytes sync_utime:int53 = raw.FullAccountState;
 raw.message source:accountAddress destination:accountAddress value:int64 fwd_fee:int64 ihr_fee:int64 created_lt:int64 body_hash:bytes msg_data:msg.Data = raw.Message;
 raw.transaction utime:int53 data:bytes transaction_id:internal.transactionId fee:int64 storage_fee:int64 other_fee:int64 in_msg:raw.message out_msgs:vector<raw.message> = raw.Transaction;
 raw.transactions transactions:vector<raw.transaction> previous_transaction_id:internal.transactionId = raw.Transactions;
+raw.appliedShardsInfo shards:vector<tonNode.blockIdExt> = raw.appliedShardsInfo;
 
 pchan.config alice_public_key:string alice_address:accountAddress bob_public_key:string bob_address:accountAddress init_timeout:int32 close_timeout:int32 channel_id:int64 = pchan.Config;
 
@@ -164,17 +167,20 @@ query.fees source_fees:fees destination_fees:vector<fees> = query.Fees;
 // query.emulationResult exit_code:int32 fees:fees = query.EmulationResult;
 query.info id:int53 valid_until:int53 body_hash:bytes body:bytes init_state:bytes = query.Info;
 
+tvm.builder bytes:bytes = tvm.Builder;
 tvm.slice bytes:bytes = tvm.Slice;
 tvm.cell bytes:bytes = tvm.Cell;
 tvm.numberDecimal number:string = tvm.Number;
 tvm.tuple elements:vector<tvm.StackEntry> = tvm.Tuple;
 tvm.list elements:vector<tvm.StackEntry> = tvm.List;
 
+tvm.stackEntryBuilder builder:tvm.builder = tvm.StackEntry;
 tvm.stackEntrySlice slice:tvm.slice = tvm.StackEntry;
 tvm.stackEntryCell cell:tvm.cell = tvm.StackEntry;
 tvm.stackEntryNumber number:tvm.Number = tvm.StackEntry;
 tvm.stackEntryTuple tuple:tvm.Tuple = tvm.StackEntry;
 tvm.stackEntryList list:tvm.List = tvm.StackEntry;
+tvm.stackEntryNull = tvm.StackEntry;
 tvm.stackEntryUnsupported = tvm.StackEntry;
 
 smc.info id:int53 = smc.Info;
@@ -183,6 +189,9 @@ smc.methodIdNumber number:int32 = smc.MethodId;
 smc.methodIdName name:string = smc.MethodId;
 
 smc.runResult gas_used:int53 stack:vector<tvm.StackEntry> exit_code:int32 = smc.RunResult;
+
+smc.runTvmResultOk mode:# block_root_hash:int256 exit_code:int stack:mode.0?vector<tvm.StackEntry> init_c7:mode.1?tvm.StackEntry messages:mode.2?vector<bytes> data:mode.3?bytes code:mode.4?bytes = smc.RunTvmResult;
+smc.runTvmResultException block_root_hash:int256 exit_code:int exit_arg:tvm.StackEntry = smc.RunTvmResult;
 
 updateSendLiteServerQuery id:int64 data:bytes = Update;
 updateSyncState sync_state:SyncState = Update;
@@ -240,11 +249,15 @@ getBip39Hints prefix:string = Bip39Hints;
 
 //raw.init initial_account_state:raw.initialAccountState = Ok;
 raw.getShardAccountState account_address:accountAddress = raw.ShardAccountState;
+raw.getShardAccountMeta account_address:accountAddress = raw.ShardAccountMeta;
 raw.getAccount account_address:accountAddress workchain:int32 = Data;
 raw.getTransactions private_key:InputKey account_address:accountAddress from_transaction_id:internal.transactionId = raw.Transactions;
 raw.sendMessage body:bytes  = Ok;
 raw.createAndSendMessage destination:accountAddress initial_account_state:bytes data:bytes = Ok;
 raw.createQuery destination:accountAddress init_code:bytes init_data:bytes body:bytes = query.Info;
+raw.getAccountByBlock block_root_hash:int256 account_id:int256 = raw.ShardAccountState;
+raw.getAccountMetaByBlock block_root_hash:int256 account_id:int256 = raw.ShardAccountMeta;
+raw.getAppliedShardsInfo = raw.AppliedShardsInfo;
 
 sync = tonNode.BlockIdExt;
 
@@ -277,6 +290,11 @@ smc.getCode id:int53 = tvm.Cell;
 smc.getData id:int53 = tvm.Cell;
 smc.getState id:int53 = tvm.Cell;
 smc.runGetMethod id:int53 method:smc.MethodId stack:vector<tvm.StackEntry> = smc.RunResult;
+
+smc.runTvm mode:# account_address:accountAddress stack:vector<tvm.StackEntry> = smc.RunTvmResult;
+smc.runTvmByBlock mode:# account_id:int256 block_root_hash:int256 stack:vector<tvm.StackEntry> = smc.RunTvmResult;
+smc.runTvmMsg mode:# message:bytes = smc.RunTvmResult;
+smc.runTvmMsgByBlock mode:# block_root_hash:int256 message:bytes = smc.RunTvmResult;
 
 dns.resolve account_address:accountAddress name:string category:int32 ttl:int32 = dns.Resolved;
 

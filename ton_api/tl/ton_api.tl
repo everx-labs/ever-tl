@@ -49,6 +49,7 @@ pub.unenc data:bytes = PublicKey;
 pub.ed25519 key:int256 = PublicKey;
 pub.aes key:int256 = PublicKey;
 pub.overlay name:bytes = PublicKey;
+pub.bls bls_key:bytes = PublicKey;
 
 
 ---functions---
@@ -374,8 +375,20 @@ tonNode.ihrMessage data:bytes = tonNode.IhrMessage;
 tonNode.externalMessage data:bytes = tonNode.ExternalMessage;
 tonNode.rempMessage message:bytes id:int256 timestamp:long signature:bytes = tonNode.RempMessage;
 
-tonNode.rmqMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.RmqRecord;
-tonNode.rmqMessageDigest masterchain_seqno:int messages:(vector int256) = tonNode.RmqRecord;
+tonNode.rempCatchainMessageIds id:int256 uid:int256 = tonNode.rempCatchainMessageIds;
+
+// Legacy, to be removed in later version
+tonNode.rempCatchainMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rempCatchainRecord;
+tonNode.rempCatchainMessageDigest masterchain_seqno:int messages:(vector tonNode.rempCatchainMessageIds) = tonNode.rempCatchainRecord;
+tonNode.rmqMessage message:bytes message_id:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rmqRecord;
+tonNode.rmqMessageDigest masterchain_seqno:int messages:(vector int256) = tonNode.rmqRecord;
+// 
+
+tonNode.rempCatchainMessageHeaderV2 message_id:int256 message_uid:int256 source_key_id:int256 source_idx:int masterchain_seqno:int = tonNode.rempCatchainRecordV2;
+tonNode.rempCatchainMessageDigestV2 masterchain_seqno:int messages:(vector tonNode.rempCatchainMessageIds) = tonNode.rempCatchainRecordV2;
+
+tonNode.rempMessageQuery message_id:int256 = tonNode.rempMessageQuery;
+tonNode.rempMessageBody message:bytes = tonNode.rempMessageBody;
 
 tonNode.rempFullnode = tonNode.RempMessageLevel;
 tonNode.rempQueue = tonNode.RempMessageLevel;
@@ -421,10 +434,14 @@ tonNode.newShardBlock block:tonNode.blockIdExt cc_seqno:int data:bytes = tonNode
 tonNode.blockBroadcast id:tonNode.blockIdExt catchain_seqno:int validator_set_hash:int 
               signatures:(vector tonNode.blockSignature) 
               proof:bytes data:bytes = tonNode.Broadcast;
+tonNode.queueUpdateBroadcast id:tonNode.blockIdExt catchain_seqno:int validator_set_hash:int 
+              signatures:(vector tonNode.blockSignature) target_wc:int
+              data:bytes = tonNode.Broadcast;
 tonNode.ihrMessageBroadcast message:tonNode.ihrMessage = tonNode.Broadcast;
 tonNode.externalMessageBroadcast message:tonNode.externalMessage = tonNode.Broadcast;
 tonNode.newShardBlockBroadcast block:tonNode.newShardBlock = tonNode.Broadcast;
 tonNode.connectivityCheckBroadcast pub_key:int256 padding:bytes = tonNode.Broadcast;
+tonNode.blockCandidateBroadcast id:tonNode.blockIdExt data:bytes collated_data:bytes collated_data_file_hash:int256 created_by:int256 created_timestamp:long = tonNode.Broadcast;
 
 tonNode.shardPublicOverlayId workchain:int shard:long zero_state_file_hash:int256 = tonNode.ShardPublicOverlayId;
 
@@ -445,6 +462,8 @@ tonNode.success = tonNode.Success;
 tonNode.archiveNotFound = tonNode.ArchiveInfo;
 tonNode.archiveInfo id:long = tonNode.ArchiveInfo;
 
+tonNode.blockCandidateStatus candidate_id:int256 deliveries_signature:bytes approvals_signature:bytes rejections_signature:bytes merges_cnt:int created_timestamp:long = tonNode.BlockCandidateStatus;
+
 ---functions---
 
 tonNode.getNextBlockDescription prev_block:tonNode.blockIdExt = tonNode.BlockDescription;
@@ -455,16 +474,20 @@ tonNode.prepareKeyBlockProof block:tonNode.blockIdExt allow_partial:Bool = tonNo
 tonNode.prepareBlockProofs blocks:(vector tonNode.blockIdExt) allow_partial:Bool = tonNode.PreparedProof;
 tonNode.prepareKeyBlockProofs blocks:(vector tonNode.blockIdExt) allow_partial:Bool = tonNode.PreparedProof;
 tonNode.prepareBlock block:tonNode.blockIdExt = tonNode.Prepared;
+tonNode.prepareQueueUpdate block:tonNode.blockIdExt target_wc:int = tonNode.Prepared;
 tonNode.prepareBlocks blocks:(vector tonNode.blockIdExt) = tonNode.Prepared;
 tonNode.preparePersistentState block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt = tonNode.PreparedState;
+tonNode.preparePersistentMsgQueue block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt target_wc:int = tonNode.PreparedState;
 tonNode.prepareZeroState block:tonNode.blockIdExt = tonNode.PreparedState;
 tonNode.getNextKeyBlockIds block:tonNode.blockIdExt max_size:int = tonNode.KeyBlocks;
 tonNode.downloadNextBlockFull prev_block:tonNode.blockIdExt = tonNode.DataFull;
 tonNode.downloadBlockFull block:tonNode.blockIdExt = tonNode.DataFull;
+tonNode.downloadQueueUpdate block:tonNode.blockIdExt target_wc:int = tonNode.Data;
 tonNode.downloadBlock block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadBlocks blocks:(vector tonNode.blockIdExt) = tonNode.DataList;
 tonNode.downloadPersistentState block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadPersistentStateSlice block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt offset:long max_size:long = tonNode.Data;
+tonNode.downloadPersistentMsgQueueSlice block:tonNode.blockIdExt masterchain_block:tonNode.blockIdExt target_wc:int offset:long max_size:long = tonNode.Data;
 tonNode.downloadZeroState block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadBlockProof block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadKeyBlockProof block:tonNode.blockIdExt = tonNode.Data;
@@ -681,11 +704,13 @@ engine.validator.importPrivateKey key:PrivateKey = engine.validator.KeyHash;
 engine.validator.exportPrivateKey key_hash:int256 = PrivateKey;
 engine.validator.exportPublicKey key_hash:int256 = PublicKey;
 engine.validator.generateKeyPair = engine.validator.KeyHash;
+engine.validator.generateBlsKeyPair = engine.validator.KeyHash;
 engine.validator.addAdnlId key_hash:int256 category:int = engine.validator.Success;
 engine.validator.addDhtId key_hash:int256 = engine.validator.Success;
 engine.validator.addValidatorPermanentKey key_hash:int256 election_date:int ttl:int = engine.validator.Success;
 engine.validator.addValidatorTempKey permanent_key_hash:int256 key_hash:int256 ttl:int = engine.validator.Success;
 engine.validator.addValidatorAdnlAddress permanent_key_hash:int256 key_hash:int256 ttl:int = engine.validator.Success;
+engine.validator.addValidatorBlsKey permanent_key_hash:int256 key_hash:int256 ttl:int = engine.validator.Success;
 engine.validator.changeFullNodeAdnlAddress adnl_id:int256 = engine.validator.Success; 
 engine.validator.addLiteserver key_hash:int256 port:int = engine.validator.Success;
 engine.validator.addControlInterface key_hash:int256 port:int = engine.validator.Success;
@@ -706,6 +731,7 @@ engine.validator.delProxy out_ip:int out_port:int categories:(vector int) priori
 engine.validator.sign key_hash:int256 data:bytes = engine.validator.Signature;
 
 engine.validator.getStats = engine.validator.Stats;
+engine.validator.getSelectedStats filter:string = engine.validator.Stats;
 engine.validator.getSessionStats = engine.validator.SessionStats;
 engine.validator.getConfig = engine.validator.JsonConfig;
 
