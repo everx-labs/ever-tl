@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.75
+
+- Supported merge of block and types repositories
+
+## Version 0.3.70
+
+- Added new structs for REMP
+
+## Version 0.3.62
+
+- Get rid of ton::bytes
+
+## Version 0.3.59
+
+- Added remp v2 catchain messages
+
 ## Version 0.3.47
 
 - Added BLS data structures 
