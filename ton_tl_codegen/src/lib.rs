@@ -2112,3 +2112,4 @@ pub fn generate_code_for(config: Option<Config>, input: &str, path: &Path) {
 
     constructors.print_tokens(&config, prelude, path);
 }
+

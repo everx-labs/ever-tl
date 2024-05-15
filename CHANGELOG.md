@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.80
+
+- Data structures for mesh networks
+
 ## Version 0.3.75
 
 - Supported merge of block and types repositories

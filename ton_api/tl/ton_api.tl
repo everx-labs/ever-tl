@@ -442,6 +442,7 @@ tonNode.externalMessageBroadcast message:tonNode.externalMessage = tonNode.Broad
 tonNode.newShardBlockBroadcast block:tonNode.newShardBlock = tonNode.Broadcast;
 tonNode.connectivityCheckBroadcast pub_key:int256 padding:bytes = tonNode.Broadcast;
 tonNode.blockCandidateBroadcast id:tonNode.blockIdExt data:bytes collated_data:bytes collated_data_file_hash:int256 created_by:int256 created_timestamp:long = tonNode.Broadcast;
+tonNode.meshUpdateBroadcast src_nw:int32 id:tonNode.blockIdExt target_nw:int32 data:bytes = tonNode.Broadcast;
 
 tonNode.shardPublicOverlayId workchain:int shard:long zero_state_file_hash:int256 = tonNode.ShardPublicOverlayId;
 
@@ -499,6 +500,10 @@ tonNode.downloadBlockProofLinks blocks:(vector tonNode.blockIdExt) = tonNode.Dat
 tonNode.downloadKeyBlockProofLinks blocks:(vector tonNode.blockIdExt) = tonNode.DataList;
 tonNode.getArchiveInfo masterchain_seqno:int = tonNode.ArchiveInfo;
 tonNode.getArchiveSlice archive_id:long offset:long max_size:int = tonNode.Data;
+tonNode.downloadLatestMeshKit target_nw:int = tonNode.DataFull;
+tonNode.downloadMeshKit target_nw:int block:tonNode.blockIdExt = tonNode.Data;
+tonNode.downloadMeshUpdate target_nw:int block:tonNode.blockIdExt = tonNode.Data;
+tonNode.downloadNextMeshUpdate target_nw:int prev_block:tonNode.blockIdExt = tonNode.DataFull;
 
 tonNode.getCapabilities = tonNode.Capabilities;
 
