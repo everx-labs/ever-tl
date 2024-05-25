@@ -873,9 +873,9 @@ impl WireKind {
         };
         let contained = if include_determiner {
             match contained {
-                WireKind::Bare(ty) => ty.transformed_tokens(|t| quote!(crate::ton::Bare, #t)),
-                WireKind::Boxed(ty) => ty.transformed_tokens(|t| quote!(crate::ton::Boxed, #t)),
-                WireKind::TypeParameter(t) => quote!(crate::ton::Boxed, #t),
+                WireKind::Bare(ty) |
+                WireKind::Boxed(ty) => ty.tokens,
+                WireKind::TypeParameter(t) => quote!(#t), //quote!(crate::ton::Boxed, #t),
                 _ => unimplemented!(),
             }
         } else {
@@ -943,6 +943,7 @@ struct TypeIR {
     needs_box: bool,
     needs_determiner: bool,
     with_option: bool,
+    contained: Option<(Vec<Ident>, bool)>
 }
 
 impl TypeIR {
@@ -980,6 +981,7 @@ impl TypeIR {
             with_option: false,
             needs_box,
             needs_determiner,
+            contained: None
         }
     }
 
@@ -989,6 +991,7 @@ impl TypeIR {
             needs_box: false,
             needs_determiner: false,
             with_option: false,
+            contained: None
         }
     }
 
@@ -998,6 +1001,7 @@ impl TypeIR {
             needs_box: false,
             needs_determiner: false,
             with_option: false,
+            contained: None
         }
     }
 
@@ -1007,6 +1011,7 @@ impl TypeIR {
             needs_box: false,
             needs_determiner: false,
             with_option: false,
+            contained: None
         }
     }
 
@@ -1016,6 +1021,7 @@ impl TypeIR {
             needs_box: false,
             needs_determiner: false,
             with_option: false,
+            contained: None
         }
     }
 
@@ -1024,6 +1030,12 @@ impl TypeIR {
     }
 
     fn with_container(self, mut container: TypeIR) -> Self {
+        let bare = if let WireKind::Bare(_) = &self.wire_kind {
+            true
+        } else {
+            false
+        };
+        container.contained = Some((self.owned_names_vec(), bare));
         container.wire_kind.become_container_for(container.needs_determiner, self.wire_kind);
         container
     }
@@ -1156,6 +1168,18 @@ impl TypeIR {
             .unwrap()
             .clone()
     }
+
+    fn contained(&self) -> (Tokens, bool) {
+        let Some((idents, bare)) = &self.contained else {
+            panic!("Wrong type name")
+        };
+        let mut tokens = quote!(crate::ton);
+        for ident in idents {
+            tokens = quote!(#tokens::#ident);
+        } 
+        (tokens, *bare)
+    }
+ 
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -1213,6 +1237,7 @@ impl FieldIR {
                 needs_box: false,
                 needs_determiner: false,
                 with_option: false,
+                contained: None
             },
             flag_bit: None,
         }
@@ -1400,7 +1425,16 @@ impl Constructor<TypeIR, FieldIR> {
         let mut reads = Vec::<Tokens>::new();
         for f in &self.fields {
             let read_method = f.ty.as_read_method();
-            let mut read_op = quote!(_de. #read_method ()?);
+            let mut read_op = if f.ty.needs_determiner {
+                let (tokens, bare) = f.ty.contained();
+                if bare {
+                    quote!(<Vec<#tokens> as crate::ton::VectoredBare<#tokens>>::deserialize(_de)?)
+                } else {
+                    quote!(<Vec<#tokens> as crate::ton::VectoredBoxed<#tokens>>::deserialize(_de)?)
+                }
+            } else {
+                quote!(_de. #read_method ()?)
+            };
             if f.ty.needs_box {
                 read_op = quote!(Box::new(#read_op));
             }
@@ -1553,32 +1587,52 @@ impl Constructor<TypeIR, FieldIR> {
     fn as_variant_serialize(&self) -> Tokens {
         let determine_flags = self.as_struct_determine_flags(quote!())
             .unwrap_or_default();
-        let fields = self.fields.iter()
-            .map(|f| {
-                if f.ty.is_unit() {
-                    return quote!();
-                }
-                let write_method = match f.ty.as_write_method() {
-                    Some(m) => m,
-                    None => return quote!(),
-                };
-                let field_name = f.name();
-                let local_name = f.local_name().unwrap_or_else(|| field_name.clone());
-                if f.ty.is_flags() {
-                    quote! { _ser. #write_method (&_flags)?; }
-                } else if f.flag_bit.is_some() {
-                    quote! {
-                        if let Some(inner) = #local_name {
-                            _ser. #write_method (inner)?;
-                        }
+        let mut fields = Vec::new();
+        for f in self.fields.iter() {
+            if f.ty.is_unit() {
+                continue
+            }
+            let write_method = match f.ty.as_write_method() {
+                Some(m) => m,
+                None => continue
+            };
+            let field_name = f.name();
+            let local_name = f.local_name().unwrap_or_else(|| field_name.clone());
+            let field = if f.ty.is_flags() {
+                quote! { _ser.#write_method(&_flags)?; }
+            } else if f.flag_bit.is_some() {
+                let tokens = if f.ty.needs_determiner {
+                    let (tokens, bare) = f.ty.contained();
+                    if bare {
+                        quote!((inner as &dyn crate::ton::VectoredBare<#tokens>).serialize(_ser)?;)
+                    } else {
+                        quote!((inner as &dyn crate::ton::VectoredBoxed<#tokens>).serialize(_ser)?;)
                     }
-                } else if f.ty.needs_box {
-                    quote!(_ser.#write_method(#local_name.as_ref())?;)
+                } else {
+                    quote!(_ser.#write_method(inner)?;)
+                };
+                quote! {
+                    if let Some(inner) = #local_name {
+                        #tokens
+                    }
+                }
+            } else if f.ty.needs_box {
+                quote!(_ser.#write_method(#local_name.as_ref())?;)
+            } else {
+                if f.ty.needs_determiner {
+                    let (tokens, bare) = f.ty.contained();
+                    if bare {
+                        quote!((#local_name as &dyn crate::ton::VectoredBare<#tokens>).serialize(_ser)?;)
+                    } else {
+                        quote!((#local_name as &dyn crate::ton::VectoredBoxed<#tokens>).serialize(_ser)?;)
+                    }
                 } else {
                     let prefix = f.ty.local_reference_prefix();
-                    quote!(_ser. #write_method(#prefix #local_name)?;)
+                    quote!(_ser.#write_method(#prefix #local_name)?;)
                 }
-            });
+            };
+            fields.push(field);
+        }
         quote! {
             #determine_flags
             #( #fields )*

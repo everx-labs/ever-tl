@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.3.83
+
+- Simpify vector serialization
+
 ## Version 0.3.80
 
 - Data structures for mesh networks
