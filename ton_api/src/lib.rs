@@ -60,7 +60,7 @@ impl<'r> Deserializer<'r> {
     pub fn new(reader: &'r mut dyn Read) -> Self {
         Deserializer { 
             reader,
-            pos: 0 
+            pos: 0
         }
     }
 
@@ -102,9 +102,8 @@ impl<'r> Read for Deserializer<'r> {
 }
 
 /// Trait for bare type deserialization
-pub trait BareDeserialize
-where Self: Sized,
-{
+pub trait BareDeserialize: Sized {
+
     /// Read bare-serialized value using `Deserializer`
     fn deserialize_bare(de: &mut Deserializer) -> Result<Self>;
 
@@ -112,12 +111,12 @@ where Self: Sized,
     fn bare_deserialized_from_bytes(mut bytes: &[u8]) -> Result<Self> {
         Deserializer::new(&mut bytes).read_bare()
     }
+
 }
 
 /// Trait for boxed type deserialization
-pub trait BoxedDeserialize
-where Self: Sized,
-{
+pub trait BoxedDeserialize: Sized {
+
     /// Returns all possible constructors of boxed type
     fn possible_constructors() -> Vec<ConstructorNumber>;
 
@@ -128,6 +127,7 @@ where Self: Sized,
     fn boxed_deserialized_from_bytes(mut bytes: &[u8]) -> Result<Self> {
         Deserializer::new(&mut bytes).read_boxed()
     }
+
 }
 
 /// Trait for deserializing any value represented `Object` TL type

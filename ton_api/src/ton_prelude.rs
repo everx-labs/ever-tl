@@ -22,7 +22,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use extfmt::Hexlify;
 use ordered_float::OrderedFloat;
 use serde_derive::{Deserialize, Serialize};
-use std::{any::type_name, fmt, hash::{Hash, Hasher}, io::{Read, Write}, marker::PhantomData};
+use std::{any::type_name, fmt, hash::{Hash, Hasher}, io::{Read, Write}};
 use ever_block::error;
 
 const MAX_BYTES_DEBUG_LEN: usize = 4;
@@ -72,16 +72,6 @@ macro_rules! impl_byteslike {
         }
 
     };
-}
-
-/// Represents bytes vector.
-pub type bytes = Vec<u8>;
-
-impl BareSerialize for bytes {
-    fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
-    fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
-        ser.write_bare::<[u8]>(self)
-    }
 }
 
 /// Represents 128-bit unsigned integer.
@@ -291,118 +281,108 @@ impl<T> BoxedSerialize for Box<T>
     }
 }
 
-/// Base enumeration for any bare type. Used as vectors type parameter.
-#[derive(Default, PartialEq, Hash)]
-pub struct Bare;
+/// Vector serialization
+pub trait Vectored<T> {
 
-/// Base enumeration for any boxed type. Used as vectors type parameter.
-#[derive(Default, PartialEq, Hash)]
-pub struct Boxed;
+    fn deserialize_with(
+        de: &mut Deserializer,
+        op: fn(&mut Deserializer) -> Result<T>
+    ) -> Result<Vec<T>> where Self: Sized {
+        let count = de.read_i32::<LittleEndian>()?;
+        let mut ret = Vec::new();
+        ret.try_reserve_exact(count as usize).map_err(                               
+            |e| error!("count {} is too big for {}: {}", count, type_name::<Self>(), e)
+        )?;
+        for _ in 0..count {
+            ret.push(op(de)?)
+        }
+        Ok(ret)
+    }
 
-#[derive(PartialEq, Hash, Default)]
-pub struct Vector<Det, T>(pub Vec<T>, PhantomData<fn() -> Det>);
-pub type vector<Det, T> = Vector<Det, T>;
+    fn serialize_with(
+        &self, 
+        ser: &mut Serializer, 
+        op: fn(&mut Serializer, &T) -> Result<()>
+    ) -> Result<()> {
+        let vec = self.vector();
+        ser.write_i32::<LittleEndian>(vec.len() as i32)?;
+        for item in vec.iter() {
+            op(ser, item)?
+        }
+        Ok(())
+    }
 
-impl<Det, T> Clone for Vector<Det, T>
-    where T: Clone,
-{
-    fn clone(&self) -> Self {
-        Vector(self.0.clone(), PhantomData)
+    fn vector(&self) -> &Vec<T>;
+
+}
+
+/// Vector of bare objects
+pub trait VectoredBare<T: BareDeserialize + BareSerialize> {
+    fn deserialize(de: &mut Deserializer) -> Result<Vec<T>> where Self: Sized;
+    fn serialize(&self, ser: &mut Serializer) -> Result<()>;
+}
+
+/// Vector of boxed objects
+pub trait VectoredBoxed<T: BoxedDeserialize + BoxedSerialize> {
+    fn deserialize(de: &mut Deserializer) -> Result<Vec<T>> where Self: Sized;
+    fn serialize(&self, ser: &mut Serializer) -> Result<()>;
+}
+
+/// Vector of generic objects
+pub type vector<T> = Vec<T>;
+
+impl <T> Vectored<T> for Vec<T> {
+    fn vector(&self) -> &Vec<T> {
+        self
+    }
+}                        
+
+impl <T: BareDeserialize + BareSerialize> VectoredBare<T> for Vec<T> { 
+    fn deserialize(de: &mut Deserializer) -> Result<Vec<T>> {
+        <Vec<T> as Vectored<T>>::deserialize_with(de, |de| de.read_bare())
+    }
+    fn serialize(&self, ser: &mut Serializer) -> Result<()> {
+        (self as &dyn Vectored<T>).serialize_with(ser, |ser, item| ser.write_bare(item))
     }
 }
 
-impl<Det, T> fmt::Debug for Vector<Det, T>
-    where T: fmt::Debug,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_tuple("Vector")
-            .field(&self.0)
-            .finish()
+impl <T: BoxedDeserialize + BoxedSerialize> VectoredBoxed<T> for Vec<T> { 
+    fn deserialize(de: &mut Deserializer) -> Result<Vec<T>> {
+        <Vec<T> as Vectored<T>>::deserialize_with(de, |de| de.read_boxed())
+    }
+    fn serialize(&self, ser: &mut Serializer) -> Result<()> {
+        (self as &dyn Vectored<T>).serialize_with(ser, |ser, item| ser.write_boxed(item))
     }
 }
 
+/* Seems to be unused
 const VECTOR_CONSTRUCTOR: ConstructorNumber = ConstructorNumber(0x1cb5c415);
 
-macro_rules! impl_vector {
-    ($det:ident, $det_de:ident, $det_ser:ident, $read_method:ident, $write_method:ident) => {
-
-        impl<T> From<Vec<T>> for Vector<$det, T> {
-            fn from(obj: Vec<T>) -> Self {
-                Vector(obj, PhantomData)
-            }
-        }
-
-        impl<T> From<Vector<$det, T>> for Vec<T> {
-            fn from(obj: Vector<$det, T>) -> Self {
-                obj.0
-            }
-        }
-
-        impl<T> ::std::ops::Deref for Vector<$det, T> {
-            type Target = [T];
-            fn deref(&self) -> &[T] { &self.0 }
-        }
-
-        impl<T> ::std::ops::DerefMut for Vector<$det, T> {
-            fn deref_mut(&mut self) -> &mut [T] { &mut self.0 }
-        }
-
-        impl<T> BareDeserialize for Vector<$det, T>
-            where T: $det_de,
-        {
-            fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
-                let count = de.read_i32::<LittleEndian>()?;
-                let mut ret = Vec::new();
-                ret.try_reserve_exact(count as usize)
-                    .map_err(
-                        |e| error!("count {} is too big for {}: {}", count, type_name::<Self>(), e)
-                    )?;
-                for _ in 0..count {
-                    ret.push(de.$read_method()?);
-                }
-                Ok(ret.into())
-            }
-        }
-
-        impl<T> BoxedDeserialize for Vector<$det, T>
-            where Self: BareDeserialize,
-        {
-            fn possible_constructors() -> Vec<ConstructorNumber> { vec![VECTOR_CONSTRUCTOR] }
-
-            fn deserialize_boxed(id: ConstructorNumber, de: &mut Deserializer) -> Result<Self> {
-                assert_eq!(id, VECTOR_CONSTRUCTOR);
-                Self::deserialize_bare(de)
-            }
-        }
-
-        impl<T> BareSerialize for Vector<$det, T>
-            where T: $det_ser,
-        {
-            fn constructor(&self) -> crate::ConstructorNumber { VECTOR_CONSTRUCTOR }
-            fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
-                ser.write_i32::<LittleEndian>(self.0.len() as i32)?;
-                for item in &self.0 {
-                    ser.$write_method(item)?;
-                }
-                Ok(())
-            }
-        }
-
-        impl<T> BoxedSerialize for Vector<$det, T>
-            where Self: BareSerialize,
-        {
-            fn serialize_boxed(&self) -> (ConstructorNumber, &dyn BareSerialize) {
-                (VECTOR_CONSTRUCTOR, self)
-            }
-        }
-
+impl<T> BoxedSerialize for Vec<T>
+    where Self: BareSerialize
+{
+    fn serialize_boxed(&self) -> (ConstructorNumber, &dyn BareSerialize) {
+        (VECTOR_CONSTRUCTOR, self)
     }
 }
 
-impl_vector! { Bare, BareDeserialize, BareSerialize, read_bare, write_bare }
-impl_vector! { Boxed, BoxedDeserialize, BoxedSerialize, read_boxed, write_boxed }
+impl<T> BoxedDeserialize for Vec<T>
+    where Self: BareDeserialize
+{
+    fn possible_constructors() -> Vec<ConstructorNumber> { 
+        vec![VECTOR_CONSTRUCTOR] 
+    }
+    fn deserialize_boxed(id: ConstructorNumber, de: &mut Deserializer) -> Result<Self> {
+        assert_eq!(id, VECTOR_CONSTRUCTOR);
+        <Vec<T> as BareDeserialize>::deserialize_bare(de)
+    }
+}
+*/
 
-impl BareDeserialize for Vec<u8> {
+/// Vector of bytes
+pub type bytes = Vec<u8>;
+
+impl BareDeserialize for bytes {
     fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
         let len = de.read_u8()?;
         let (len, mut have_read) = if len != 254 {
@@ -425,6 +405,13 @@ impl BareDeserialize for Vec<u8> {
             de.read_exact(&mut buf[remainder..])?;
         }
         Ok(buf)
+    }
+}
+
+impl BareSerialize for bytes {
+    fn constructor(&self) -> crate::ConstructorNumber { unreachable!() }
+    fn serialize_bare(&self, ser: &mut Serializer) -> Result<()> {
+        ser.write_bare::<[u8]>(self)
     }
 }
 
@@ -541,3 +528,4 @@ pub type Function = TLObject;
 pub type secureBytes = crate::secure::SecureBytes;
 /// Alias of SecureString built-in type.
 pub type secureString = crate::secure::SecureString;
+                                  	
