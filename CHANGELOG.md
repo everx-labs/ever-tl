@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.4.0
+
+- Use modern crates anyhow and thiserror instead of failure
+
 ## Version 0.3.83
 
 - Simpify vector serialization
