@@ -42,8 +42,8 @@ impl fmt::Debug for ConstructorNumber {
 }
 
 /// Struct for handling mismatched constructor number
-#[derive(Debug, failure::Fail)]
-#[fail(display = "expected a constructor in {:?}; got {:?}", expected, received)]
+#[derive(Debug, thiserror::Error)]
+#[error("expected a constructor in {:?}; got {:?}", .expected, .received)]
 pub struct InvalidConstructor {
     pub expected: Vec<ConstructorNumber>,
     pub received: ConstructorNumber,
