@@ -502,15 +502,13 @@ impl BareSerialize for double {
 }
 
 // Built-in types:
-// pub type Int8 = i8;
-pub type Int32 = i32;
-pub type Int53 = i64;
-pub type Int64 = i64;
-
-// pub type int8 = Int8;
-pub type int32 = Int32;
-pub type int53 = Int53;
-pub type int64 = Int64;
+//pub type int8 = i8;
+pub type int32 = i32;
+pub type int53 = i64;
+pub type int64 = i64;
+pub type uint8 = u8;
+pub type uint32 = u32;
+pub type uint64 = u64;
 
 /// Flags built-in type.
 pub type Flags = u32;
