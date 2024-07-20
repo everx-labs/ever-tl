@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.4.9
+
+- Updated data structures for message packs
+
 ## Version 0.4.4
 
 - Data structures for message packs

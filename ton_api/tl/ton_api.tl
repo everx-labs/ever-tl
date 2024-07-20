@@ -453,13 +453,15 @@ ton.blockIdApprove root_cell_hash:int256 file_hash:int256 = ton.BlockId;
 
 tonNode.dataList data:(vector bytes) = tonNode.DataList;
 
+tonNode.voteInfo id:int256 digest:int256 = tonNode.VoteInfo;
 tonNode.packInfo flags:# gen_utime_ms:uint64 mc_block:uint32 prev1:int256 prev2:flags.0?int256 round:uint64 seqno:uint64 workchain:int32 shard:uint64 = tonNode.PackInfo;
 tonNode.messagePoolAck transfer_tag:uint8 = tonNode.MessagePoolMessage;
 tonNode.messagePoolFetch digests:(vector int256) = tonNode.MessagePoolMessage;
+tonNode.messagePoolFetchData digest:int256 = tonNode.MessagePoolMessage;
 tonNode.messagePoolFetchPack digest:int256 = tonNode.MessagePoolMessage;
 tonNode.messagePoolFetchReply data:(vector bytes) = tonNode.MessagePoolMessage;
-tonNode.messagePoolPack digest:int256 = tonNode.MessagePoolMessage;
-tonNode.messagePoolPackReply digest:int256 = tonNode.MessagePoolMessage;
+tonNode.messagePoolPack pack:int256 vote:(vector tonNode.voteInfo) = tonNode.MessagePoolMessage;
+tonNode.messagePoolPackReply pack:int256 vote:(vector tonNode.voteInfo) = tonNode.MessagePoolMessage;
 tonNode.messagePoolShare digests:(vector int256) = tonNode.MessagePoolMessage;
 tonNode.messagePoolShareData flags:# info:flags.0?tonNode.packInfo data:(vector bytes) = tonNode.MessagePoolMessage;
 tonNode.messagePoolSharePack data:bytes = tonNode.MessagePoolMessage;
