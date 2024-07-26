@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.4.12
+
+- Message packs structures optimization
+
 ## Version 0.4.9
 
 - Updated data structures for message packs
