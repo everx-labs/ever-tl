@@ -1553,6 +1553,12 @@ impl Constructor<TypeIR, FieldIR> {
                 pub(crate) type BlockIdExt = ever_block::BlockIdExt;
                 pub(crate) const TL_TAG: crate::ConstructorNumber = #tl_id; 
             }
+        } else if self.variant_name() == "PackInfo" {
+            let tl_id = self.tl_id().unwrap();
+            return quote! {
+                pub(crate) type PackInfo = ever_block::MsgPackInfo;
+                pub(crate) const TL_TAG: crate::ConstructorNumber = #tl_id; 
+            }
         }
         if self.fields.is_empty() {
             quote!()
@@ -2106,6 +2112,10 @@ impl Constructors<TypeIR, FieldIR> {
         if name == "BlockIdExt" {
             return quote! {
                 pub(crate) type BlockIdExt = ever_block::BlockIdExt;
+            }
+        } else if name == "PackInfo" {
+            return quote! {
+                pub(crate) type PackInfo = ever_block::MsgPackInfo;
             }
         }
         let mut derives = quote! { Debug, Clone, PartialEq };

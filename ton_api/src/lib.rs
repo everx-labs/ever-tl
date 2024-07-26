@@ -16,7 +16,9 @@
 use crate::{ton_prelude::TLObject, ton::ton_node::{RempMessageStatus, RempMessageLevel}};
 use std::{any::Any, fmt, hash::Hash, io::{self, Read, Write}, convert::TryFrom, sync::Arc};
 
-use ever_block::{BlockIdExt, ShardIdent, fail, KeyOption, Result, UInt256, Ed25519KeyOption};
+use ever_block::{
+    fail, BlockIdExt, Ed25519KeyOption, KeyOption, MsgPackInfo, Result, ShardIdent, UInt256
+};
 
 macro_rules! _invalid_id {
     ($id:ident) => {
@@ -313,6 +315,72 @@ impl BoxedDeserialize for BlockIdExt {
 impl BoxedSerialize for BlockIdExt {
     fn serialize_boxed(&self) -> (ConstructorNumber, &dyn BareSerialize) {
         (crate::ton::ton_node::blockidext::TL_TAG, self)
+    }
+}
+
+impl BareDeserialize for MsgPackInfo {
+    fn deserialize_bare(de: &mut Deserializer) -> Result<Self> {
+        let flags = de.read_bare::<crate::ton::Flags>()?;
+        let ret = Self {
+            gen_utime_ms: de.read_bare::<crate::ton::uint64>()?,
+            mc_block: de.read_bare::<crate::ton::uint32>()?,
+            prev: de.read_bare::<UInt256>()?,
+            prev_2: if flags & (1 << 0u32) != 0 {
+                Some(de.read_bare::<UInt256>()?)
+            } else {
+                None
+            },
+            round: de.read_bare::<crate::ton::uint64>()?,
+            seqno: de.read_bare::<crate::ton::uint64>()?,
+            shard: ShardIdent::with_tagged_prefix(
+                de.read_bare::<crate::ton::int32>()?,
+                de.read_bare::<crate::ton::uint64>()?
+            )?
+        };
+        Ok(ret)
+    }
+}
+
+impl BareSerialize for MsgPackInfo {
+    fn constructor(&self) -> ConstructorNumber {
+        crate::ton::ton_node::packinfo::TL_TAG
+    }
+    fn serialize_bare(&self, se: &mut Serializer) -> Result<()> {
+        let mut flags = 0u32;
+        if self.prev_2.is_some() {
+            flags |= 1 << 0u32;
+        }
+        se.write_bare::<crate::ton::Flags>(&flags)?;
+        se.write_bare::<crate::ton::uint64>(&self.gen_utime_ms)?;
+        se.write_bare::<crate::ton::uint32>(&self.mc_block)?;
+        se.write_bare::<UInt256>(&self.prev)?;
+        if let Some(prev2) = &self.prev_2 {
+            se.write_bare::<UInt256>(prev2)?;
+        }
+        se.write_bare::<crate::ton::uint64>(&self.round)?;
+        se.write_bare::<crate::ton::uint64>(&self.seqno)?;
+        se.write_bare::<crate::ton::int32>(&self.shard.workchain_id())?;
+        se.write_bare::<crate::ton::uint64>(&self.shard.shard_prefix_with_tag())?;
+        Ok(())
+    }
+}
+
+impl BoxedDeserialize for MsgPackInfo {
+    fn possible_constructors() -> Vec<crate::ConstructorNumber> {
+        vec![crate::ton::ton_node::packinfo::TL_TAG]
+    }
+    fn deserialize_boxed(id: ConstructorNumber, de: &mut Deserializer) -> Result<Self> {
+        if id == crate::ton::ton_node::packinfo::TL_TAG {
+            de.read_bare()
+        } else {
+            _invalid_id!(id)
+        }
+    }
+}
+
+impl BoxedSerialize for MsgPackInfo {
+    fn serialize_boxed(&self) -> (ConstructorNumber, &dyn BareSerialize) {
+        (crate::ton::ton_node::packinfo::TL_TAG, self)
     }
 }
 
