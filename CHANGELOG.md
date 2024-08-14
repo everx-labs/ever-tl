@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## Version 0.4.17
+
+- Message packs structures more optimizations
 
 ## Version 0.4.16
 
