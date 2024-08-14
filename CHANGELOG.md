@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## Version 0.4.16
+
+- Added `engine.validator.resetExternalDb` function to support new console command
+
 ## Version 0.4.12
 
 - Message packs structures optimization

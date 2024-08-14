@@ -735,6 +735,7 @@ engine.validator.addLiteserver key_hash:int256 port:int = engine.validator.Succe
 engine.validator.addControlInterface key_hash:int256 port:int = engine.validator.Success;
 engine.validator.addControlProcess key_hash:int256 port:int peer_key:int256 permissions:int = engine.validator.Success;
 engine.validator.setStatesGcInterval interval_ms:int = engine.validator.Success;
+engine.validator.resetExternalDb = engine.validator.Success;
 
 engine.validator.delAdnlId key_hash:int256 = engine.validator.Success;
 engine.validator.delDhtId key_hash:int256 = engine.validator.Success;
