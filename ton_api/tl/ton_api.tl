@@ -739,7 +739,6 @@ engine.validator.setStatesGcInterval interval_ms:int = engine.validator.Success;
 engine.validator.resetExternalDb = engine.validator.Success;
 engine.validator.openExtMsgProxy port:int = engine.validator.Success;
 
-
 engine.validator.delAdnlId key_hash:int256 = engine.validator.Success;
 engine.validator.delDhtId key_hash:int256 = engine.validator.Success;
 engine.validator.delValidatorPermanentKey key_hash:int256 = engine.validator.Success;
