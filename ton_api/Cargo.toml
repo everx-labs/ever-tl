@@ -3,7 +3,7 @@ authors = [ 'Aaron Gallagher <_@habnab.it>', 'Connie Hilarides <connorcpu@live.c
 description = 'Minimal wrappers for TON serialization using TL-schema'
 edition = '2021'
 name = 'ton_api'
-version = '0.4.27'
+version = '0.4.28'
 
 [dependencies]
 anyhow = '1.0'
