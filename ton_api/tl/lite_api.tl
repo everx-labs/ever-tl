@@ -63,6 +63,7 @@ liteServer.getBlock id:tonNode.blockIdExt = liteServer.BlockData;
 liteServer.getState id:tonNode.blockIdExt = liteServer.BlockState;
 liteServer.getBlockHeader id:tonNode.blockIdExt mode:# = liteServer.BlockHeader;
 liteServer.sendMessage body:bytes = liteServer.SendMsgStatus;
+liteServer.sendMessageNoWait body:bytes = liteServer.SendMsgStatus;
 liteServer.getAccountState id:tonNode.blockIdExt account:liteServer.accountId = liteServer.AccountState;
 liteServer.runSmcMethod mode:# id:tonNode.blockIdExt account:liteServer.accountId method_id:long params:bytes = liteServer.RunMethodResult;
 liteServer.getShardInfo id:tonNode.blockIdExt workchain:int shard:long exact:Bool = liteServer.ShardInfo;
